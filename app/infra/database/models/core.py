@@ -5,13 +5,12 @@ from uuid import UUID, uuid4
 from sqlalchemy import DATETIME, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infra.database.models.base import Base
 
 uuidpk = Annotated[UUID, mapped_column(SQLUUID(as_uuid=True), primary_key=True, default=uuid4)]
 intpk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
-
-
-class Base(DeclarativeBase): ...
 
 
 class Engine(Base):
