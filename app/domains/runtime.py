@@ -5,6 +5,8 @@ from uuid import UUID
 
 @dataclass
 class EngineRuntimeState:
+    id: int
+
     engine_id: UUID
 
     reported_phase: str

@@ -6,6 +6,8 @@ from uuid import UUID
 
 @dataclass
 class EngineSpec:
+    id: int
+
     engine_id: UUID
     config: dict  # TODO: make this more specific
     enabled: bool
