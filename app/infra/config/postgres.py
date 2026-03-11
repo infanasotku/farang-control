@@ -7,7 +7,7 @@ class PostgreSQLSettings(BaseModel):
     username: str
     db_name: str
 
-    sql_schema: str = Field(default="public")
+    schema_: str = Field(default="public", alias="schema", serialization_alias="schema")
     port: int = Field(default=5432)
 
     @computed_field
