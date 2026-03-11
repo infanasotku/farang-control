@@ -1,8 +1,8 @@
-"""ADd engine runtime state
+"""Add engine specs
 
-Revision ID: 289ecc47e8a9
-Revises: 90deb21ca107
-Create Date: 2026-03-10 23:55:32.159232
+Revision ID: 002_add_engine_specs
+Revises: 001_add_engines
+Create Date: 2026-03-10 23:53:43.529885
 
 """
 
@@ -10,10 +10,11 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "289ecc47e8a9"
-down_revision: Union[str, Sequence[str], None] = "90deb21ca107"
+revision: str = "002_add_engine_specs"
+down_revision: Union[str, Sequence[str], None] = "001_add_engines"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -21,11 +22,11 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.create_table(
-        "engine_runtime_states",
+        "engine_specs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("reported_phase", sa.String(length=20), nullable=False),
-        sa.Column("observed_generation", sa.Integer(), nullable=False),
-        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("config", postgresql.JSON(astext_type=sa.Text()), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column("generation", sa.Integer(), nullable=False),
         sa.Column("engine_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(["engine_id"], ["engines.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -34,4 +35,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table("engine_runtime_states")
+    op.drop_table("engine_specs")

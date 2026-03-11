@@ -1,7 +1,7 @@
-"""Add engine
+"""Add engines
 
-Revision ID: c7d0333f263d
-Revises: 7b4617042fe4
+Revision ID: 001_add_engines
+Revises: 000_init
 Create Date: 2026-03-10 23:53:23.853457
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "c7d0333f263d"
-down_revision: Union[str, Sequence[str], None] = "7b4617042fe4"
+revision: str = "001_add_engines"
+down_revision: Union[str, Sequence[str], None] = "000_init"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
