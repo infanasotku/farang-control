@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
 from app.container import Container
-from app.controllers import api as api_v1
+from app.controllers.api import middlewares
+from app.controllers.api import router as v1
 
 
 def create_app() -> FastAPI:
@@ -14,7 +15,8 @@ def create_app() -> FastAPI:
 
     app = FastAPI()
 
-    app.include_router(api_v1.router, prefix="/api/v1")
+    app.include_router(v1, prefix="/api/v1")
+    app.add_middleware(middlewares.CorrelationIdASGIMiddleware)
 
     return app
 
