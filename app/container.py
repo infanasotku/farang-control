@@ -22,4 +22,4 @@ class Container(containers.DeclarativeContainer):
         tx_sessionmaker=tx_sessionmaker,
     )
 
-    spec_serivce = providers.Factory(SpecService, spec_uow)
+    spec_service = providers.Factory(SpecService, spec_uow)
