@@ -1,16 +1,11 @@
 from datetime import datetime
-from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy.dialects.postgresql import UUID as SQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infra.database.models.base import Base
-
-uuidpk = Annotated[UUID, mapped_column(SQLUUID(as_uuid=True), primary_key=True, default=uuid4)]
-intpk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
+from app.infra.database.models.base import Base, intpk, uuidpk
 
 
 class Engine(Base):
