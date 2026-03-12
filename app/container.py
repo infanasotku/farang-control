@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infra.config import generate_settings
 from app.infra.database import create_engine
-from app.infra.database.uows import PgSpecUnitOfWork
+from app.infra.database.uows import PgEngineUnitOfWork
 from app.services.engine import EngineService
 from app.services.state import StateService
 
@@ -18,7 +18,7 @@ class Container(containers.DeclarativeContainer):
     tx_sessionmaker = providers.Singleton(async_sessionmaker[AsyncSession], tx_engine)
 
     spec_uow = providers.Factory(
-        PgSpecUnitOfWork,
+        PgEngineUnitOfWork,
         plain_sessionmaker=plain_sessionmaker,
         tx_sessionmaker=tx_sessionmaker,
     )

@@ -1,11 +1,11 @@
 from uuid import UUID
 
 from app.domains.spec import EngineSpec
-from app.infra.database.uows import PgSpecUnitOfWork
+from app.infra.database.uows import PgEngineUnitOfWork
 
 
 class EngineService:
-    def __init__(self, uow: PgSpecUnitOfWork) -> None:
+    def __init__(self, uow: PgEngineUnitOfWork) -> None:
         self._uow = uow
 
     async def get_by_engine(self, engine_id: UUID) -> EngineSpec | None:

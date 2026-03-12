@@ -1,8 +1,8 @@
 from app.infra.database.uows.base import PgUnitOfWork
-from app.infra.database.uows.spec import PgSpecUnitOfWork
+from app.infra.database.uows.engine import PgEngineUnitOfWork
 
 __all__ = [
     "PgUnitOfWork",
     #
-    "PgSpecUnitOfWork",
+    "PgEngineUnitOfWork",
 ]
