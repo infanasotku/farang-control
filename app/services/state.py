@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from app.domains.runtime import NewEngineRuntimeState, ReportedPhase
+from app.domains.runtime import LivenessStatus, NewEngineRuntimeState, ReportedPhase
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import PgStateUnitOfWork
 from app.schemas.state import CreateEngineInstance
-from app.services.exceptions.state import InstanceAliveError, InstanceDeprecatedError
+from app.services.exceptions.engine import EngineNotFoundError
+from app.services.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
 
 
 class StateService:
@@ -12,27 +13,32 @@ class StateService:
         self._uow = uow
 
     async def register_instance(self, *, instance_id: UUID, engine_id: UUID) -> int:
+        """
+        Register an engine instance in an idempotent manner and return the assigned epoch.
+        """
         async with self._uow.begin(with_tx=True) as ctx:
+            # Serialize registrations for the same engine,
+            # including the first one when state does not exist yet.
+            engine = await ctx.engines.get_engine_for_update(engine_id)
+            if engine is None:
+                raise EngineNotFoundError(engine_id)
+
             state = await ctx.states.get_engine_state_for_update(engine_id)
             instance = await ctx.instances.get_instance_by_id(instance_id)
+
             if instance is not None:
-                # Should not happen because instance is created after state is created, but just in case
                 if state is None:
                     raise RuntimeError("Inconsistent state: instance exists but state does not exist")
 
                 if instance.id_ == state.current_instance_id:
-                    if state.current_epoch is None:
-                        raise RuntimeError("Inconsistent state: instance exists but current_epoch is None")
                     return state.current_epoch
 
                 raise InstanceDeprecatedError(instance_id)
 
-            if state is not None:
-                if state.get_liveness() == "alive":
-                    raise InstanceAliveError(state.current_instance_id)
+            if state is not None and state.get_liveness() == LivenessStatus.ALIVE:
+                raise CurrentInstanceAliveError(state.current_instance_id)
 
             new_epoch = 1 if state is None else state.current_epoch + 1
-            phase = ReportedPhase.STARTING
 
             await ctx.instances.create(
                 CreateEngineInstance(
@@ -44,7 +50,7 @@ class StateService:
 
             new_state = NewEngineRuntimeState(
                 engine_id=engine_id,
-                reported_phase=phase,
+                reported_phase=ReportedPhase.STARTING,
                 observed_generation=0,
                 last_seen_at=now_utc(),
                 current_instance_id=instance_id,

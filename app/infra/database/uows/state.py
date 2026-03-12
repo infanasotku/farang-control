@@ -6,17 +6,18 @@ from app.infra.database.repositories.state import (
     PgStateRepository,
     PgStateTxRepository,
 )
-from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
+from app.infra.database.uows.base import PgUnitOfWork
+from app.infra.database.uows.engine import EngineContext, EngineTxContext
 
 
-class StateContext(PgUOWContext):
+class StateContext(EngineContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
         self.states = PgStateRepository(session)
         self.instances = PgInstanceRepository(session)
 
 
-class StateTxContext(PgTxUOWContext):
+class StateTxContext(EngineTxContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
         self.states = PgStateTxRepository(session)

@@ -16,10 +16,7 @@ class EngineInstance(Base):
 
     epoch: Mapped[int] = mapped_column(nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("engine_id", "epoch", name="uq_engine_instance_engine_id_epoch"),
-        UniqueConstraint("id", "engine_id", name="uq_engine_instance_id_engine_id"),
-    )
+    __table_args__ = (UniqueConstraint("engine_id", "epoch", name="uq_engine_instance_engine_id_epoch"),)
 
 
 class EngineRuntimeState(Base):

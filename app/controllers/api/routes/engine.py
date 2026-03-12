@@ -2,12 +2,14 @@ from typing import Annotated
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from app.container import Container
 from app.controllers.api.schemas.engine import EngineSpecResponse, RegisterEngineInstanceResponse
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
+from app.services.exceptions.engine import EngineNotFoundError
+from app.services.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
 from app.services.state import StateService
 
 router = APIRouter()
@@ -38,8 +40,11 @@ async def register_engine_instance(
 ) -> RegisterEngineInstanceResponse:
     try:
         epoch = await svc.register_instance(instance_id=instance_id, engine_id=engine_id)
-    except Exception as e:
-        logger.error(f"Error occurred while registering engine instance: {e}")
-        raise HTTPException(status_code=500, detail="Failed to register engine instance")
+    except InstanceDeprecatedError as e:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(e))
+    except CurrentInstanceAliveError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except EngineNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return RegisterEngineInstanceResponse(epoch=epoch)

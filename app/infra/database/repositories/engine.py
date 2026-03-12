@@ -27,6 +27,11 @@ class PgEngineTxRepository(PgEngineRepository):
         stmt = insert(EngineModel).values(id=engine.id, name=engine.name)
         await self._session.execute(stmt)
 
+    async def get_engine_for_update(self, engine_id: UUID) -> Engine | None:
+        stmt = select(EngineModel).where(EngineModel.id == engine_id).with_for_update()
+        row = await self._session.scalar(stmt)
+        return engine_from_model(row) if row else None
+
 
 def engine_spec_from_model(model: EngineSpecModel) -> EngineSpec:
     return EngineSpec(
