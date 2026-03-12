@@ -1,5 +1,5 @@
 # Hack for Base.metadata to be available in env.py
 # for autogenerate support
-from app.infra.database.models import core, registry
+from app.infra.database.models import engine, state
 
-__all__ = ["core", "registry"]
+__all__ = ["engine", "state"]

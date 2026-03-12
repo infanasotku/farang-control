@@ -6,9 +6,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.domains.engine import Engine
 from app.domains.runtime import EngineRuntimeState
 from app.domains.spec import EngineSpec
-from app.infra.database.models.core import Engine as EngineModel
-from app.infra.database.models.core import EngineRuntimeState as EngineRuntimeStateModel
-from app.infra.database.models.core import EngineSpec as EngineSpecModel
+from app.infra.database.models.engine import Engine as EngineModel
+from app.infra.database.models.engine import EngineRuntimeState as EngineRuntimeStateModel
+from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.database.repositories.base import PostgresRepository
 from app.schemas.core import CreateEngine
 
