@@ -5,6 +5,7 @@ from app.infra.config import generate_settings
 from app.infra.database import create_engine
 from app.infra.database.uows import PgSpecUnitOfWork
 from app.services.spec import SpecService
+from app.services.state import StateService
 
 
 class Container(containers.DeclarativeContainer):
@@ -23,3 +24,4 @@ class Container(containers.DeclarativeContainer):
     )
 
     spec_service = providers.Factory(SpecService, spec_uow)
+    state_service = providers.Factory(StateService)

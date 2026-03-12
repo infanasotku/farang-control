@@ -11,3 +11,7 @@ class EngineSpecResponse(BaseModel):
     config_hash: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RegisterEngineInstanceResponse(BaseModel):
+    epoch: int
