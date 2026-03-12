@@ -4,7 +4,7 @@ from app.domains.spec import EngineSpec
 from app.infra.database.uows import PgSpecUnitOfWork
 
 
-class SpecService:
+class EngineService:
     def __init__(self, uow: PgSpecUnitOfWork) -> None:
         self._uow = uow
 

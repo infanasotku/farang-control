@@ -1,7 +1,6 @@
-from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,19 +23,3 @@ class EngineSpec(Base):
     generation: Mapped[int] = mapped_column(nullable=False)
 
     engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
-
-
-class EngineRuntimeState(Base):
-    __tablename__ = "engine_runtime_states"
-
-    id: Mapped[intpk]
-    reported_phase: Mapped[str] = mapped_column(String(20), nullable=False)
-    observed_generation: Mapped[int] = mapped_column(nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
-    engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
-    current_instance_id: Mapped[UUID] = mapped_column(
-        ForeignKey("engine_instances.id", ondelete="SET NULL"), nullable=True
-    )
-    current_epoch: Mapped[int] = mapped_column(nullable=True)
-    last_seq_no: Mapped[int] = mapped_column(nullable=False)

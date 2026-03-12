@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
-from app.infra.database.repositories.core import PgEngineSpecRepository, PgEngineSpecTxRepository
+from app.infra.database.repositories.engine import PgEngineSpecRepository, PgEngineSpecTxRepository
 from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
 
 
