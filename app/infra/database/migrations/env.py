@@ -48,7 +48,7 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
-    connection.execute(text(f"set search_path to '{settings.postgres.schema}'"))
+    connection.execute(text(f"set search_path to '{settings.postgres.schema_}'"))
 
     with context.begin_transaction():
         context.run_migrations()
