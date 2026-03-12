@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.domains.runtime import ReportedPhase
 from app.infra.database.models.base import Base, intpk, uuidpk
 
 
@@ -25,7 +26,7 @@ class EngineRuntimeState(Base):
     __tablename__ = "engine_runtime_states"
 
     id: Mapped[intpk]
-    reported_phase: Mapped[str] = mapped_column(String(20), nullable=False)
+    reported_phase: Mapped[ReportedPhase] = mapped_column(String(20), nullable=False)
     observed_generation: Mapped[int] = mapped_column(nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
