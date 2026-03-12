@@ -30,8 +30,6 @@ class EngineRuntimeState(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
-    current_instance_id: Mapped[UUID] = mapped_column(
-        ForeignKey("engine_instances.id", ondelete="SET NULL"), nullable=True
-    )
-    current_epoch: Mapped[int] = mapped_column(nullable=True)
+    current_instance_id: Mapped[UUID] = mapped_column(ForeignKey("engine_instances.id"), nullable=False)
+    current_epoch: Mapped[int] = mapped_column(nullable=False)
     last_seq_no: Mapped[int] = mapped_column(nullable=False)
