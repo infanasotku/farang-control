@@ -22,4 +22,8 @@ class EngineSpec(Base):
     enabled: Mapped[bool] = mapped_column(nullable=False)
     generation: Mapped[int] = mapped_column(nullable=False)
 
-    engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
+    engine_id: Mapped[UUID] = mapped_column(
+        ForeignKey("engines.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )

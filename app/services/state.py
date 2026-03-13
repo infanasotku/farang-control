@@ -35,7 +35,7 @@ class StateService:
 
                 raise InstanceDeprecatedError(instance_id)
 
-            if state is not None and state.get_liveness() == LivenessStatus.ALIVE:
+            if state is not None and state.get_liveness() != LivenessStatus.DEAD:
                 raise CurrentInstanceAliveError(state.current_instance_id)
 
             new_epoch = 1 if state is None else state.current_epoch + 1

@@ -87,10 +87,8 @@ POST /engines/{engine_id}/register-instance
 
 ## Request
 
-```json
-{
-  "instance_id": "uuid"
-}
+```query
+?instance_id=UUID
 ```
 
 ## Response

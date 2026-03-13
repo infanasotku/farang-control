@@ -15,6 +15,7 @@ class EngineInstance(Base):
     engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
 
     epoch: Mapped[int] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (UniqueConstraint("engine_id", "epoch", name="uq_engine_instance_engine_id_epoch"),)
 
@@ -27,7 +28,11 @@ class EngineRuntimeState(Base):
     observed_generation: Mapped[int] = mapped_column(nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    engine_id: Mapped[UUID] = mapped_column(ForeignKey("engines.id", ondelete="CASCADE"), nullable=False)
+    engine_id: Mapped[UUID] = mapped_column(
+        ForeignKey("engines.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
     current_instance_id: Mapped[UUID] = mapped_column(ForeignKey("engine_instances.id"), nullable=False)
     current_epoch: Mapped[int] = mapped_column(nullable=False)
     last_seq_no: Mapped[int] = mapped_column(nullable=False)

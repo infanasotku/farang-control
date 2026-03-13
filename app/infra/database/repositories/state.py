@@ -71,7 +71,12 @@ class PgStateTxRepository(PgStateRepository):
 
 
 def engine_instance_from_model(model: EngineInstanceModel) -> EngineInstance:
-    return EngineInstance(id=model.id, engine_id=model.engine_id, epoch=model.epoch)
+    return EngineInstance(
+        id=model.id,
+        engine_id=model.engine_id,
+        epoch=model.epoch,
+        created_at=model.created_at,
+    )
 
 
 class PgInstanceRepository(PostgresRepository):
@@ -87,5 +92,6 @@ class PgInstanceTxRepository(PgInstanceRepository):
             id=payload.id_,
             engine_id=payload.engine_id,
             epoch=payload.epoch,
+            created_at=payload.created_at,
         )
         await self._session.execute(stmt)
