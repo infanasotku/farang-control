@@ -4,10 +4,10 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.runtime import EngineRuntimeState, NewEngineRuntimeState
+from app.dto.state import CreateEngineInstance, EngineInstance
 from app.infra.database.models.state import EngineInstance as EngineInstanceModel
 from app.infra.database.models.state import EngineRuntimeState as EngineRuntimeStateModel
 from app.infra.database.repositories.base import PostgresRepository
-from app.schemas.state import CreateEngineInstance, EngineInstance
 
 
 def engine_runtime_state_from_model(model: EngineRuntimeStateModel) -> EngineRuntimeState:
