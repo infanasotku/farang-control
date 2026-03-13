@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
-from app.infra.common.time import now_utc
-
 
 @dataclass
 class NewEngineRuntimeState:
@@ -35,8 +33,6 @@ class ReportedPhase(StrEnum):
 
 @dataclass
 class EngineRuntimeState:
-    id: int
-
     engine_id: UUID
 
     reported_phase: ReportedPhase
@@ -47,10 +43,10 @@ class EngineRuntimeState:
     current_instance_id: UUID
     current_epoch: int
 
-    def get_liveness(self) -> LivenessStatus:
-        if now_utc() - self.last_seen_at > DEAD_THRESHOLD:
+    def get_liveness(self, now: datetime) -> LivenessStatus:
+        if now - self.last_seen_at > DEAD_THRESHOLD:
             liveness = LivenessStatus.DEAD
-        elif now_utc() - self.last_seen_at > STALE_THRESHOLD:
+        elif now - self.last_seen_at > STALE_THRESHOLD:
             liveness = LivenessStatus.STALE
         else:
             liveness = LivenessStatus.ALIVE

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 from app.domains.runtime import EngineRuntimeState, LivenessStatus
@@ -16,7 +17,7 @@ class DerivedEngineStatus:
     sync: SyncStatus
 
     @classmethod
-    def derive(cls, *, spec: EngineSpec, runtime: EngineRuntimeState) -> "DerivedEngineStatus":
+    def derive(cls, now: datetime, *, spec: EngineSpec, runtime: EngineRuntimeState) -> "DerivedEngineStatus":
         sync = SyncStatus.IN_SYNC if runtime.observed_generation == spec.generation else SyncStatus.OUTDATED
 
-        return cls(liveness=runtime.get_liveness(), sync=sync)
+        return cls(liveness=runtime.get_liveness(now), sync=sync)

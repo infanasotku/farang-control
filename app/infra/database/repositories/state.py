@@ -12,7 +12,6 @@ from app.schemas.state import CreateEngineInstance, EngineInstance
 
 def engine_runtime_state_from_model(model: EngineRuntimeStateModel) -> EngineRuntimeState:
     return EngineRuntimeState(
-        id=model.id,
         reported_phase=model.reported_phase,
         observed_generation=model.observed_generation,
         last_seen_at=model.last_seen_at,

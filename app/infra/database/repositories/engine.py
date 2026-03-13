@@ -35,7 +35,6 @@ class PgEngineTxRepository(PgEngineRepository):
 
 def engine_spec_from_model(model: EngineSpecModel) -> EngineSpec:
     return EngineSpec(
-        id=model.id,
         config=model.config,
         enabled=model.enabled,
         generation=model.generation,
