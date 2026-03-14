@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from app.domains.runtime import LivenessStatus, NewEngineRuntimeState, ReportedPhase
+from app.domains.state import LivenessStatus, NewEngineRuntimeState, ReportedPhase
 from app.dto.state import CreateEngineInstance
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import PgStateUnitOfWork

@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.runtime import EngineRuntimeState, NewEngineRuntimeState
+from app.domains.state import EngineRuntimeState, NewEngineRuntimeState
 from app.dto.state import CreateEngineInstance, EngineInstance
 from app.infra.database.models.state import EngineInstance as EngineInstanceModel
 from app.infra.database.models.state import EngineRuntimeState as EngineRuntimeStateModel

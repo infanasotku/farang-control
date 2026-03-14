@@ -3,8 +3,7 @@ from uuid import UUID
 from sqlalchemy import insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.engine import Engine
-from app.domains.spec import EngineSpec
+from app.domains.engine import Engine, EngineSpec
 from app.dto.core import CreateEngine
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel

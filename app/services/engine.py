@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from app.domains.spec import EngineSpec
+from app.domains.engine import EngineSpec
 from app.infra.database.uows import PgEngineUnitOfWork
 
 

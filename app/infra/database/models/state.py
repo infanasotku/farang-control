@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.domains.runtime import ReportedPhase
+from app.domains.state import ReportedPhase
 from app.infra.database.models.base import Base, intpk, uuidpk
 
 
