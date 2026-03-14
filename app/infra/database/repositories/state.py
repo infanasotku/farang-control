@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.state import EngineInstance, EngineRuntimeState
-from app.dto.state import CreateEngineInstance, CreateEngineRuntimeState
 from app.infra.database.models.state import EngineInstance as EngineInstanceModel
 from app.infra.database.models.state import EngineRuntimeState as EngineRuntimeStateModel
 from app.infra.database.repositories.base import PostgresRepository
@@ -31,7 +30,7 @@ class PgStateRepository(PostgresRepository):
 
 
 class PgStateTxRepository(PgStateRepository):
-    async def upsert_engine_state(self, state: CreateEngineRuntimeState) -> None:
+    async def upsert_engine_state(self, state: EngineRuntimeState) -> None:
         stmt = (
             pg_insert(EngineRuntimeStateModel)
             .values(
@@ -86,9 +85,9 @@ class PgInstanceRepository(PostgresRepository):
 
 
 class PgInstanceTxRepository(PgInstanceRepository):
-    async def create(self, payload: CreateEngineInstance):
+    async def create(self, payload: EngineInstance):
         stmt = pg_insert(EngineInstanceModel).values(
-            id=payload.id_,
+            id=payload.instance_id,
             engine_id=payload.engine_id,
             epoch=payload.epoch,
             created_at=payload.created_at,

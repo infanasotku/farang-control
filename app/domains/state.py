@@ -19,6 +19,11 @@ class ReportedPhase(StrEnum):
     STARTING = "starting"
 
 
+class SyncStatus(StrEnum):
+    IN_SYNC = "in_sync"
+    OUTDATED = "outdated"
+
+
 @dataclass
 class EngineRuntimeState:
     engine_id: UUID
@@ -41,10 +46,55 @@ class EngineRuntimeState:
 
         return liveness
 
+    @classmethod
+    def initial(
+        cls,
+        *,
+        now: datetime,
+        engine_id: UUID,
+        instance_id: UUID,
+        epoch: int,
+    ) -> "EngineRuntimeState":
+        return cls(
+            engine_id=engine_id,
+            reported_phase=ReportedPhase.STARTING,
+            observed_generation=0,
+            last_seen_at=now,
+            last_seq_no=0,
+            current_instance_id=instance_id,
+            current_epoch=epoch,
+        )
 
-class SyncStatus(StrEnum):
-    IN_SYNC = "in_sync"
-    OUTDATED = "outdated"
+
+@dataclass
+class EngineInstance:
+    instance_id: UUID
+    engine_id: UUID
+    epoch: int
+    created_at: datetime
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        now: datetime,
+        instance_id: UUID,
+        engine_id: UUID,
+        epoch: int,
+    ) -> "EngineInstance":
+        return cls(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            epoch=epoch,
+            created_at=now,
+        )
+
+
+@dataclass
+class RegistrationResult:
+    epoch: int
+    new_instance: EngineInstance | None
+    new_runtime_state: EngineRuntimeState | None
 
 
 @dataclass
@@ -57,11 +107,3 @@ class DerivedEngineStatus:
         sync = SyncStatus.IN_SYNC if runtime.observed_generation == spec.generation else SyncStatus.OUTDATED
 
         return cls(liveness=runtime.get_liveness(now), sync=sync)
-
-
-@dataclass
-class EngineInstance:
-    instance_id: UUID
-    engine_id: UUID
-    epoch: int
-    created_at: datetime

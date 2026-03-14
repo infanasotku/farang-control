@@ -1,11 +1,9 @@
 from uuid import UUID
 
-from app.domains.state import LivenessStatus, ReportedPhase
-from app.dto.state import CreateEngineInstance, CreateEngineRuntimeState
+from app.domains.func.registration import decide_registration
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import PgStateUnitOfWork
 from app.services.exceptions.engine import EngineNotFoundError
-from app.services.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
 
 
 class StateService:
@@ -26,37 +24,19 @@ class StateService:
             state = await ctx.states.get_engine_state_for_update(engine_id)
             instance = await ctx.instances.get_instance_by_id(instance_id)
 
-            if instance is not None:
-                if state is None:
-                    raise RuntimeError("Inconsistent state: instance exists but state does not exist")
-
-                if instance.instance_id == state.current_instance_id:
-                    return state.current_epoch
-
-                raise InstanceDeprecatedError(instance_id)
-
-            if state is not None and state.get_liveness(now_utc()) != LivenessStatus.DEAD:
-                raise CurrentInstanceAliveError(state.current_instance_id)
-
-            new_epoch = 1 if state is None else state.current_epoch + 1
-
-            await ctx.instances.create(
-                CreateEngineInstance(
-                    id=instance_id,
-                    engine_id=engine_id,
-                    epoch=new_epoch,
-                    created_at=now_utc(),
-                )
-            )
-
-            new_state = CreateEngineRuntimeState(
+            now = now_utc()
+            result = decide_registration(
+                now=now,
                 engine_id=engine_id,
-                reported_phase=ReportedPhase.STARTING,
-                observed_generation=0,
-                last_seen_at=now_utc(),
-                current_instance_id=instance_id,
-                current_epoch=new_epoch,
-                last_seq_no=0,
+                requested_instance_id=instance_id,
+                current_state=state,
+                existing_instance=instance,
             )
-            await ctx.states.upsert_engine_state(new_state)
-            return new_epoch
+
+            if result.new_instance is not None:
+                await ctx.instances.create(result.new_instance)
+
+            if result.new_runtime_state is not None:
+                await ctx.states.upsert_engine_state(result.new_runtime_state)
+
+            return result.epoch
