@@ -11,6 +11,7 @@ from app.services.state import StateService
 
 class Container(containers.DeclarativeContainer):
     settings = providers.Singleton(generate_settings)
+    auth_settings = settings.provided.auth
 
     plain_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=False)
     tx_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=True)

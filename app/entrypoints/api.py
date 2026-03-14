@@ -10,6 +10,7 @@ def create_app() -> FastAPI:
     container.wire(
         packages=[
             "app.controllers.api.routes",
+            "app.controllers.api.utils",
         ],
     )
 

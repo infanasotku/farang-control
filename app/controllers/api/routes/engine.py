@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from app.container import Container
 from app.controllers.api.schemas.engine import EngineSpecResponse, RegisterEngineInstanceResponse
+from app.controllers.api.utils.auth import authenticate
 from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
 from app.services.exceptions.engine import EngineNotFoundError
 from app.services.state import StateService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(authenticate)])
 logger = get_logger().getChild(__name__)
 
 
