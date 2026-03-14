@@ -19,12 +19,8 @@ def create_app() -> FastAPI:
     app.include_router(v1, prefix="/api/v1")
     app.add_middleware(middlewares.CorrelationIdASGIMiddleware)
 
+    @app.get("/healthz", include_in_schema=False)
+    async def _():
+        return {"status": "ok"}
+
     return app
-
-
-app = create_app()
-
-
-@app.get("/healthz", include_in_schema=False)
-async def healthz():
-    return {"status": "ok"}
