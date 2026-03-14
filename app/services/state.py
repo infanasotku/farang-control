@@ -45,6 +45,7 @@ class StateService:
                     id=instance_id,
                     engine_id=engine_id,
                     epoch=new_epoch,
+                    created_at=now_utc(),
                 )
             )
 
