@@ -14,7 +14,6 @@ router = APIRouter(dependencies=[Depends(authenticate)])
 logger = get_logger().getChild(__name__)
 
 
-# TODO: Add generation and complete logic
 @router.get("/spec")
 @inject
 async def get_engine_spec(

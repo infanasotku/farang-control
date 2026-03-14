@@ -8,6 +8,7 @@ class EngineSpecResponse(BaseModel):
     config: dict
     enabled: bool
 
+    generation: int
     config_hash: str
 
     model_config = ConfigDict(from_attributes=True)
