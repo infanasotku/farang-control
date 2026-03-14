@@ -3,8 +3,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.state import EngineRuntimeState, NewEngineRuntimeState
-from app.dto.state import CreateEngineInstance, EngineInstance
+from app.domains.state import EngineInstance, EngineRuntimeState, NewEngineRuntimeState
+from app.dto.state import CreateEngineInstance
 from app.infra.database.models.state import EngineInstance as EngineInstanceModel
 from app.infra.database.models.state import EngineRuntimeState as EngineRuntimeStateModel
 from app.infra.database.repositories.base import PostgresRepository
@@ -71,7 +71,7 @@ class PgStateTxRepository(PgStateRepository):
 
 def engine_instance_from_model(model: EngineInstanceModel) -> EngineInstance:
     return EngineInstance(
-        id=model.id,
+        instance_id=model.id,
         engine_id=model.engine_id,
         epoch=model.epoch,
         created_at=model.created_at,

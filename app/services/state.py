@@ -30,7 +30,7 @@ class StateService:
                 if state is None:
                     raise RuntimeError("Inconsistent state: instance exists but state does not exist")
 
-                if instance.id_ == state.current_instance_id:
+                if instance.instance_id == state.current_instance_id:
                     return state.current_epoch
 
                 raise InstanceDeprecatedError(instance_id)

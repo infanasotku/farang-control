@@ -70,3 +70,11 @@ class DerivedEngineStatus:
         sync = SyncStatus.IN_SYNC if runtime.observed_generation == spec.generation else SyncStatus.OUTDATED
 
         return cls(liveness=runtime.get_liveness(now), sync=sync)
+
+
+@dataclass
+class EngineInstance:
+    instance_id: UUID
+    engine_id: UUID
+    epoch: int
+    created_at: datetime
