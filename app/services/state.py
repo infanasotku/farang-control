@@ -13,6 +13,11 @@ class StateService:
     async def register_instance(self, *, instance_id: UUID, engine_id: UUID) -> int:
         """
         Register an engine instance in an idempotent manner and return the assigned epoch.
+
+        Raises:
+            EngineNotFoundError: if the specified engine does not exist.
+            InstanceDeprecatedError: if the requested instance ID is different from the current one but an instance with the requested ID already exists.
+            CurrentInstanceAliveError: if the current instance is still alive (not DEAD) and a new instance is being requested.
         """
         async with self._uow.begin(with_tx=True) as ctx:
             # Serialize registrations for the same engine,

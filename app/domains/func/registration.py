@@ -13,6 +13,11 @@ def decide_registration(
     current_state: EngineRuntimeState | None,
     existing_instance: EngineInstance | None,
 ) -> RegistrationResult:
+    """
+    Raises:
+        InstanceDeprecatedError: if the requested instance ID is different from the current one but an instance with the requested ID already exists.
+        CurrentInstanceAliveError: if the current instance is still alive (not DEAD) and a new instance is being requested.
+    """
     if existing_instance is not None:
         if current_state is None:
             raise RuntimeError("Inconsistent state: instance exists but state does not exist")
