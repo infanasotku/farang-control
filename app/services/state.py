@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from app.domains.state import LivenessStatus, NewEngineRuntimeState, ReportedPhase
-from app.dto.state import CreateEngineInstance
+from app.domains.state import LivenessStatus, ReportedPhase
+from app.dto.state import CreateEngineInstance, CreateEngineRuntimeState
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import PgStateUnitOfWork
 from app.services.exceptions.engine import EngineNotFoundError
@@ -49,7 +49,7 @@ class StateService:
                 )
             )
 
-            new_state = NewEngineRuntimeState(
+            new_state = CreateEngineRuntimeState(
                 engine_id=engine_id,
                 reported_phase=ReportedPhase.STARTING,
                 observed_generation=0,
