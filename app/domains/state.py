@@ -15,7 +15,7 @@ class LivenessStatus(StrEnum):
     DEAD = "dead"
 
 
-class ReportedPhase(StrEnum):
+class InstancePhase(StrEnum):
     STARTING = "starting"
 
 
@@ -28,7 +28,7 @@ class SyncStatus(StrEnum):
 class EngineRuntimeState:
     engine_id: UUID
 
-    reported_phase: ReportedPhase
+    reported_phase: InstancePhase
     observed_generation: int
     last_seen_at: datetime
     last_seq_no: int
@@ -57,7 +57,7 @@ class EngineRuntimeState:
     ) -> "EngineRuntimeState":
         return cls(
             engine_id=engine_id,
-            reported_phase=ReportedPhase.STARTING,
+            reported_phase=InstancePhase.STARTING,
             observed_generation=0,
             last_seen_at=now,
             last_seq_no=0,

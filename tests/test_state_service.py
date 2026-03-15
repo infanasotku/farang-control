@@ -6,7 +6,7 @@ from mock import AsyncMock, MagicMock, patch
 from pytest import fixture
 
 from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
-from app.domains.state import EngineInstance, EngineRuntimeState, ReportedPhase
+from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 from app.services.exceptions.engine import EngineNotFoundError
 from app.services.state import StateService
 
@@ -54,7 +54,7 @@ class TestRegisterInstance(StateServiceDeps):
         now = datetime(2026, 3, 15, tzinfo=timezone.utc)
         state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
             engine_id=engine_id,
-            reported_phase=ReportedPhase.STARTING,
+            reported_phase=InstancePhase.STARTING,
             observed_generation=0,
             last_seen_at=now,
             last_seq_no=0,
@@ -82,7 +82,7 @@ class TestRegisterInstance(StateServiceDeps):
         now = datetime(2026, 3, 15, tzinfo=timezone.utc)
         state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
             engine_id=engine_id,
-            reported_phase=ReportedPhase.STARTING,
+            reported_phase=InstancePhase.STARTING,
             observed_generation=0,
             last_seen_at=now,
             last_seq_no=0,
@@ -112,7 +112,7 @@ class TestRegisterInstance(StateServiceDeps):
         now = datetime(2026, 3, 15, tzinfo=timezone.utc)
         state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
             engine_id=engine_id,
-            reported_phase=ReportedPhase.STARTING,
+            reported_phase=InstancePhase.STARTING,
             observed_generation=0,
             last_seen_at=now,
             last_seq_no=0,
@@ -156,7 +156,7 @@ class TestRegisterInstance(StateServiceDeps):
         assert created_state.engine_id == engine_id
         assert created_state.current_instance_id == instance_id
         assert created_state.current_epoch == 1
-        assert created_state.reported_phase == ReportedPhase.STARTING
+        assert created_state.reported_phase == InstancePhase.STARTING
         assert created_state.observed_generation == 0
         assert created_state.last_seq_no == 0
         assert created_state.last_seen_at == now
@@ -170,7 +170,7 @@ class TestRegisterInstance(StateServiceDeps):
         dead_seen_at = datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc)
         state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
             engine_id=engine_id,
-            reported_phase=ReportedPhase.STARTING,
+            reported_phase=InstancePhase.STARTING,
             observed_generation=0,
             last_seen_at=dead_seen_at,
             last_seq_no=0,
