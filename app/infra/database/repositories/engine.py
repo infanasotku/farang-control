@@ -20,6 +20,11 @@ class PgEngineRepository(PostgresRepository):
         rows = await self._session.scalars(stmt)
         return [engine_from_model(row) for row in rows]
 
+    async def get_engine_by_id(self, engine_id: UUID) -> Engine | None:
+        stmt = select(EngineModel).where(EngineModel.id == engine_id)
+        row = await self._session.scalar(stmt)
+        return engine_from_model(row) if row else None
+
 
 class PgEngineTxRepository(PgEngineRepository):
     async def add_engine(self, engine: Engine) -> None:

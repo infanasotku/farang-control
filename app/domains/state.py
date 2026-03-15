@@ -17,6 +17,7 @@ class LivenessStatus(StrEnum):
 
 class InstancePhase(StrEnum):
     STARTING = "starting"
+    # TODO new phases
 
 
 class SyncStatus(StrEnum):
@@ -46,6 +47,9 @@ class EngineRuntimeState:
 
         return liveness
 
+    def is_new_state(self, seq_no: int) -> bool:
+        return seq_no > self.last_seq_no
+
     @classmethod
     def initial(
         cls,
@@ -64,6 +68,19 @@ class EngineRuntimeState:
             current_instance_id=instance_id,
             current_epoch=epoch,
         )
+
+    def apply_heartbeat(
+        self,
+        *,
+        now: datetime,
+        reported_phase: InstancePhase,
+        observed_generation: int,
+        seq_no: int,
+    ):
+        self.reported_phase = reported_phase
+        self.observed_generation = observed_generation
+        self.last_seen_at = now
+        self.last_seq_no = seq_no
 
 
 @dataclass

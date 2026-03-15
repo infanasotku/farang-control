@@ -1,6 +1,8 @@
 from uuid import UUID
 
+from app.domains.func.heartbeat import apply_heartbeat
 from app.domains.func.registration import decide_registration
+from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import PgStateUnitOfWork
 from app.services.exceptions.engine import EngineNotFoundError
@@ -45,3 +47,35 @@ class StateService:
                 await ctx.states.upsert_engine_state(result.new_runtime_state)
 
             return result.epoch
+
+    async def apply_heartbeat(self, cmd: ApplyHeartbeatCmd):
+        """
+        Raises:
+            EngineNotFoundError: if the specified engine does not exist.
+            InstanceNotRegisteredError: if the instance is not registered (i.e., state or instance is None).
+            InstanceDeprecatedError: if the instance is deprecated (i.e., received_epoch != state.current_epoch).
+        """
+        async with self._uow.begin(with_tx=True) as ctx:
+            engine = await ctx.engines.get_engine_by_id(cmd.engine_id)
+            if engine is None:
+                raise EngineNotFoundError(cmd.engine_id)
+
+            now = now_utc()
+
+            state = await ctx.states.get_engine_state_for_update(cmd.engine_id)
+            instance = await ctx.instances.get_instance_by_id(cmd.instance_id)
+
+            result = apply_heartbeat(
+                now=now,
+                instance_id=cmd.instance_id,
+                state=state,
+                instance=instance,
+                #
+                received_epoch=cmd.epoch,
+                received_seq_no=cmd.seq_no,
+                new_phase=cmd.phase,
+                new_generation=cmd.generation,
+            )
+
+            if result.new_state is not None:
+                await ctx.states.upsert_engine_state(result.new_state)

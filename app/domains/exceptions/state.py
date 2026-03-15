@@ -9,3 +9,8 @@ class CurrentInstanceAliveError(Exception):
 class InstanceDeprecatedError(Exception):
     def __init__(self, instance_id: UUID):
         super().__init__(f"Instance {instance_id} is deprecated")
+
+
+class InstanceNotRegisteredError(Exception):
+    def __init__(self, instance_id: UUID):
+        super().__init__(f"Instance {instance_id} is not registered")
