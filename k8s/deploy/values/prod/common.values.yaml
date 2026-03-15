@@ -2,4 +2,4 @@ container:
   tag: latest
 
 config:
-  POSTGRES__DATABASE: control-test
+  POSTGRES__DATABASE: control
