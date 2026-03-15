@@ -1,0 +1,5 @@
+container:
+  tag: test
+
+config:
+  POSTGRES__DATABASE: control-test
