@@ -5,7 +5,7 @@ class PostgreSQLSettings(BaseModel):
     host: str
     password: str
     username: str
-    db_name: str
+    database: str
 
     schema_: str = Field(default="public", alias="schema", serialization_alias="schema")
     port: int = Field(default=5432)
@@ -13,4 +13,4 @@ class PostgreSQLSettings(BaseModel):
     @computed_field
     @property
     def dsn(self) -> str:
-        return f"postgresql+asyncpg://{self.username}:{self.password}" + f"@{self.host}:{self.port}/{self.db_name}"
+        return f"postgresql+asyncpg://{self.username}:{self.password}" + f"@{self.host}:{self.port}/{self.database}"
