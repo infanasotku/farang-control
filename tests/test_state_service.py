@@ -5,8 +5,13 @@ import pytest
 from mock import AsyncMock, MagicMock, patch
 from pytest import fixture
 
-from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
+from app.domains.exceptions.state import (
+    CurrentInstanceAliveError,
+    InstanceDeprecatedError,
+    InstanceNotRegisteredError,
+)
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
+from app.dto.state import ApplyHeartbeatCmd
 from app.services.exceptions.engine import EngineNotFoundError
 from app.services.state import StateService
 
@@ -18,6 +23,7 @@ def state_ctx(uow: MagicMock):
     ctx.states = MagicMock()
     ctx.instances = MagicMock()
     ctx.engines.get_engine_for_update = AsyncMock(return_value=MagicMock())
+    ctx.engines.get_engine_by_id = AsyncMock(return_value=MagicMock())
     ctx.states.get_engine_state_for_update = AsyncMock(return_value=None)
     ctx.states.upsert_engine_state = AsyncMock()
     ctx.instances.get_instance_by_id = AsyncMock(return_value=None)
@@ -216,3 +222,149 @@ class TestRegisterInstance(StateServiceDeps):
 
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+
+class TestApplyHeartbeat(StateServiceDeps):
+    @pytest.mark.asyncio
+    async def test_non_exist_engine_causes_engine_not_found_error(self, state_ctx: MagicMock):
+        cmd = ApplyHeartbeatCmd(
+            engine_id=uuid4(),
+            instance_id=uuid4(),
+            epoch=1,
+            seq_no=1,
+            phase=InstancePhase.STARTING,
+            generation=0,
+        )
+        state_ctx.engines.get_engine_by_id.return_value = None
+
+        with pytest.raises(EngineNotFoundError):
+            await self.svc.apply_heartbeat(cmd)
+
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_unregistered_instance_causes_instance_not_registered_error(self, state_ctx: MagicMock):
+        cmd = ApplyHeartbeatCmd(
+            engine_id=uuid4(),
+            instance_id=uuid4(),
+            epoch=1,
+            seq_no=1,
+            phase=InstancePhase.STARTING,
+            generation=0,
+        )
+
+        with pytest.raises(InstanceNotRegisteredError):
+            await self.svc.apply_heartbeat(cmd)
+
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_deprecated_instance_causes_instance_deprecated_error(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        current_instance_id = uuid4()
+        requested_instance_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        cmd = ApplyHeartbeatCmd(
+            engine_id=engine_id,
+            instance_id=requested_instance_id,
+            epoch=4,
+            seq_no=2,
+            phase=InstancePhase.STARTING,
+            generation=0,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.STARTING,
+            observed_generation=0,
+            last_seen_at=now,
+            last_seq_no=1,
+            current_instance_id=current_instance_id,
+            current_epoch=4,
+        )
+        state_ctx.instances.get_instance_by_id.return_value = EngineInstance(
+            instance_id=requested_instance_id,
+            engine_id=engine_id,
+            epoch=4,
+            created_at=now,
+        )
+
+        with pytest.raises(InstanceDeprecatedError):
+            await self.svc.apply_heartbeat(cmd)
+
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_duplicate_or_old_seq_no_is_ignored_without_writes(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        cmd = ApplyHeartbeatCmd(
+            engine_id=engine_id,
+            instance_id=instance_id,
+            epoch=3,
+            seq_no=5,
+            phase=InstancePhase.STARTING,
+            generation=1,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.STARTING,
+            observed_generation=0,
+            last_seen_at=now,
+            last_seq_no=5,
+            current_instance_id=instance_id,
+            current_epoch=3,
+        )
+        state_ctx.instances.get_instance_by_id.return_value = EngineInstance(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            epoch=3,
+            created_at=now,
+        )
+
+        with patch("app.services.state.now_utc", return_value=now):
+            result = await self.svc.apply_heartbeat(cmd)
+
+        assert result is None
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_new_heartbeat_updates_runtime_state(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        previous_seen_at = datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 3, 15, 0, 1, tzinfo=timezone.utc)
+        cmd = ApplyHeartbeatCmd(
+            engine_id=engine_id,
+            instance_id=instance_id,
+            epoch=2,
+            seq_no=7,
+            phase=InstancePhase.STARTING,
+            generation=5,
+        )
+        state = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.STARTING,
+            observed_generation=1,
+            last_seen_at=previous_seen_at,
+            last_seq_no=6,
+            current_instance_id=instance_id,
+            current_epoch=2,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = state
+        state_ctx.instances.get_instance_by_id.return_value = EngineInstance(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            epoch=2,
+            created_at=previous_seen_at,
+        )
+
+        with patch("app.services.state.now_utc", return_value=now):
+            result = await self.svc.apply_heartbeat(cmd)
+
+        assert result is None
+        state_ctx.states.upsert_engine_state.assert_awaited_once_with(state)
+        assert state.reported_phase == InstancePhase.STARTING
+        assert state.observed_generation == 5
+        assert state.last_seq_no == 7
+        assert state.last_seen_at == now

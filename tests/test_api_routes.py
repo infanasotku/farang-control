@@ -8,7 +8,8 @@ from pytest import fixture
 from app.container import Container
 from app.controllers.api.utils.auth import authenticate
 from app.domains.engine import EngineSpec
-from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
+from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError, InstanceNotRegisteredError
+from app.domains.state import InstancePhase
 from app.entrypoints.api import create_app
 from app.services.exceptions.engine import EngineNotFoundError
 
@@ -24,6 +25,7 @@ def engine_service() -> MagicMock:
 def state_service() -> MagicMock:
     svc = MagicMock()
     svc.register_instance = AsyncMock()
+    svc.apply_heartbeat = AsyncMock()
     return svc
 
 
@@ -134,3 +136,108 @@ class TestRegisterEngineInstanceRoute:
 
         assert response.status_code == 422
         state_service.register_instance.assert_not_called()
+
+
+class TestHeartbeatRoute:
+    def test_returns_200_when_heartbeat_succeeds(self, client: TestClient, state_service: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+
+        response = client.post(
+            f"/api/v1/engines/{engine_id}/heartbeat",
+            json={
+                "instance_id": str(instance_id),
+                "epoch": 2,
+                "seq_no": 7,
+                "phase": InstancePhase.STARTING.value,
+                "generation": 5,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json() is None
+        state_service.apply_heartbeat.assert_awaited_once()
+        cmd = state_service.apply_heartbeat.await_args.args[0]
+        assert cmd.engine_id == engine_id
+        assert cmd.instance_id == instance_id
+        assert cmd.epoch == 2
+        assert cmd.seq_no == 7
+        assert cmd.phase == InstancePhase.STARTING
+        assert cmd.generation == 5
+
+    def test_returns_404_when_engine_is_not_found(self, client: TestClient, state_service: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        state_service.apply_heartbeat.side_effect = EngineNotFoundError(engine_id)
+
+        response = client.post(
+            f"/api/v1/engines/{engine_id}/heartbeat",
+            json={
+                "instance_id": str(instance_id),
+                "epoch": 2,
+                "seq_no": 7,
+                "phase": InstancePhase.STARTING.value,
+                "generation": 5,
+            },
+        )
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": f"Engine with id {engine_id} is not found"}
+        state_service.apply_heartbeat.assert_awaited_once()
+
+    def test_returns_410_when_instance_is_deprecated(self, client: TestClient, state_service: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        state_service.apply_heartbeat.side_effect = InstanceDeprecatedError(instance_id)
+
+        response = client.post(
+            f"/api/v1/engines/{engine_id}/heartbeat",
+            json={
+                "instance_id": str(instance_id),
+                "epoch": 2,
+                "seq_no": 7,
+                "phase": InstancePhase.STARTING.value,
+                "generation": 5,
+            },
+        )
+
+        assert response.status_code == 410
+        assert response.json() == {"detail": f"Instance {instance_id} is deprecated"}
+        state_service.apply_heartbeat.assert_awaited_once()
+
+    def test_returns_409_when_instance_is_not_registered(self, client: TestClient, state_service: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        state_service.apply_heartbeat.side_effect = InstanceNotRegisteredError(instance_id)
+
+        response = client.post(
+            f"/api/v1/engines/{engine_id}/heartbeat",
+            json={
+                "instance_id": str(instance_id),
+                "epoch": 2,
+                "seq_no": 7,
+                "phase": InstancePhase.STARTING.value,
+                "generation": 5,
+            },
+        )
+
+        assert response.status_code == 409
+        assert response.json() == {"detail": f"Instance {instance_id} is not registered"}
+        state_service.apply_heartbeat.assert_awaited_once()
+
+    def test_returns_422_for_invalid_payload(self, client: TestClient, state_service: MagicMock):
+        engine_id = uuid4()
+
+        response = client.post(
+            f"/api/v1/engines/{engine_id}/heartbeat",
+            json={
+                "instance_id": "bad-uuid",
+                "epoch": "bad-int",
+                "seq_no": 7,
+                "phase": "bad-phase",
+                "generation": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        state_service.apply_heartbeat.assert_not_called()
