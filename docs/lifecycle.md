@@ -39,6 +39,18 @@ It establishes runtime ownership and initializes the runtime snapshot:
 - records the instance in history
 - makes the instance the current runtime owner
 
+## Spec Polling
+
+[Spec Polling](spec-polling.md) is the read-only step where the current engine
+instance fetches the latest desired state from the control-plane.
+
+It lets the instance detect config changes and decide whether it needs to
+reload or reapply configuration:
+
+- reads the latest `config`, `enabled`, `generation`, and `config_hash`
+- compares the returned `generation` with its locally applied generation
+- prepares the next observed state that will later be reported by heartbeat
+
 ## Heartbeat
 
 [Heartbeat](heartbeat.md) is the periodic signal sent by the current engine
