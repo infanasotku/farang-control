@@ -50,6 +50,8 @@ class StateService:
 
     async def apply_heartbeat(self, cmd: ApplyHeartbeatCmd):
         """
+        Apply a heartbeat to an engine runtime state in an idempotent manner.
+
         Raises:
             EngineNotFoundError: if the specified engine does not exist.
             InstanceNotRegisteredError: if the instance is not registered (i.e., state or instance is None).
