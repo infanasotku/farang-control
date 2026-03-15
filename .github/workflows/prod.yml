@@ -50,7 +50,7 @@ jobs:
     name: Migrate prod
     runs-on: [self-hosted, helmfile]
     needs: [build]
-    environment: migrate
+    environment: stable
 
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +64,8 @@ jobs:
   api:
     name: Deploy api prod
     runs-on: [self-hosted, helmfile]
-    needs: [build]
-    environment: api
+    needs: [migrate]
+    environment: stable
     steps:
       - uses: actions/checkout@v4
 

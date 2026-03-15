@@ -24,6 +24,7 @@ releases:
     namespace: {{ .Environment.Values.namespace }}
     labels:
       svc: migration
+    waitForJobs: true
     chart: ./charts/migration
     values:
       - deploy/values/common/common.values.yaml
