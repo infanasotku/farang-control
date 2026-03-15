@@ -55,7 +55,6 @@ class StateService:
         Raises:
             EngineNotFoundError: if the specified engine does not exist.
             InstanceNotRegisteredError: if the instance is not registered (i.e., state or instance is None).
-            InstanceDeprecatedError: if the instance is deprecated (i.e., received_epoch != state.current_epoch).
         """
         async with self._uow.begin(with_tx=True) as ctx:
             engine = await ctx.engines.get_engine_by_id(cmd.engine_id)

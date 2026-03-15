@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.domains.exceptions.state import InstanceDeprecatedError, InstanceNotRegisteredError
+from app.domains.exceptions.state import InstanceNotRegisteredError
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 
 
@@ -26,7 +26,6 @@ def apply_heartbeat(
     """
     Raises:
         InstanceNotRegisteredError: if the instance is not registered (i.e., state or instance is None).
-        InstanceDeprecatedError: if the instance is deprecated (i.e., received_epoch != state.current_epoch).
     """
     result = HeartbeatResult()
 
@@ -34,7 +33,7 @@ def apply_heartbeat(
         raise InstanceNotRegisteredError(instance_id)
 
     if received_epoch != state.current_epoch or state.current_instance_id != instance_id:
-        raise InstanceDeprecatedError(instance_id)
+        return result
 
     if not state.is_new_state(received_seq_no):
         return result

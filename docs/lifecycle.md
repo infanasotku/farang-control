@@ -24,11 +24,29 @@ interaction between the engine instance and the control-plane.
 Detailed documentation for each stage is provided in separate documents:
 
 - [Registration](registration.md)
-- [Spec Polling](TODO)
-- [Heartbeat](TODO)
+- [Spec Polling](spec-polling.md)
+- [Heartbeat](heartbeat.md)
 - [Runtime State Update](TODO)
 
 ## Registration
 
-[Registration](../docs/registration.md) is the process of an engine instance
+[Registration](registration.md) is the process of an engine instance
 announcing itself to the control-plane and receiving its assigned epoch.
+
+It establishes runtime ownership and initializes the runtime snapshot:
+
+- assigns a new monotonic `epoch`
+- records the instance in history
+- makes the instance the current runtime owner
+
+## Heartbeat
+
+[Heartbeat](heartbeat.md) is the periodic signal sent by the current engine
+instance after registration.
+
+It keeps the runtime snapshot fresh and confirms that the current owner is
+still alive:
+
+- validates `instance_id` and `epoch`
+- ignores duplicate, old, or stale-owner heartbeats
+- updates `reported_phase`, `observed_generation`, `last_seen_at`, and `last_seq_no`

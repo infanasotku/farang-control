@@ -5,11 +5,7 @@ import pytest
 from mock import AsyncMock, MagicMock, patch
 from pytest import fixture
 
-from app.domains.exceptions.state import (
-    CurrentInstanceAliveError,
-    InstanceDeprecatedError,
-    InstanceNotRegisteredError,
-)
+from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError, InstanceNotRegisteredError
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 from app.dto.state import ApplyHeartbeatCmd
 from app.services.exceptions.engine import EngineNotFoundError
@@ -259,7 +255,7 @@ class TestApplyHeartbeat(StateServiceDeps):
         state_ctx.states.upsert_engine_state.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_deprecated_instance_causes_instance_deprecated_error(self, state_ctx: MagicMock):
+    async def test_old_instance_is_ignored_without_writes(self, state_ctx: MagicMock):
         engine_id = uuid4()
         current_instance_id = uuid4()
         requested_instance_id = uuid4()
@@ -288,9 +284,43 @@ class TestApplyHeartbeat(StateServiceDeps):
             created_at=now,
         )
 
-        with pytest.raises(InstanceDeprecatedError):
-            await self.svc.apply_heartbeat(cmd)
+        result = await self.svc.apply_heartbeat(cmd)
 
+        assert result is None
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_old_epoch_is_ignored_without_writes(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        cmd = ApplyHeartbeatCmd(
+            engine_id=engine_id,
+            instance_id=instance_id,
+            epoch=3,
+            seq_no=2,
+            phase=InstancePhase.STARTING,
+            generation=0,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.STARTING,
+            observed_generation=0,
+            last_seen_at=now,
+            last_seq_no=1,
+            current_instance_id=instance_id,
+            current_epoch=4,
+        )
+        state_ctx.instances.get_instance_by_id.return_value = EngineInstance(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            epoch=3,
+            created_at=now,
+        )
+
+        result = await self.svc.apply_heartbeat(cmd)
+
+        assert result is None
         state_ctx.states.upsert_engine_state.assert_not_awaited()
 
     @pytest.mark.asyncio

@@ -185,24 +185,23 @@ class TestHeartbeatRoute:
         assert response.json() == {"detail": f"Engine with id {engine_id} is not found"}
         state_service.apply_heartbeat.assert_awaited_once()
 
-    def test_returns_410_when_instance_is_deprecated(self, client: TestClient, state_service: MagicMock):
+    def test_returns_200_when_old_instance_heartbeat_is_ignored(self, client: TestClient, state_service: MagicMock):
         engine_id = uuid4()
         instance_id = uuid4()
-        state_service.apply_heartbeat.side_effect = InstanceDeprecatedError(instance_id)
 
         response = client.post(
             f"/api/v1/engines/{engine_id}/heartbeat",
             json={
                 "instance_id": str(instance_id),
-                "epoch": 2,
+                "epoch": 1,
                 "seq_no": 7,
                 "phase": InstancePhase.STARTING.value,
                 "generation": 5,
             },
         )
 
-        assert response.status_code == 410
-        assert response.json() == {"detail": f"Instance {instance_id} is deprecated"}
+        assert response.status_code == 200
+        assert response.json() is None
         state_service.apply_heartbeat.assert_awaited_once()
 
     def test_returns_409_when_instance_is_not_registered(self, client: TestClient, state_service: MagicMock):

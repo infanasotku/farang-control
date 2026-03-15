@@ -60,7 +60,5 @@ async def heartbeat(
         await svc.apply_heartbeat(cmd)
     except EngineNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except InstanceDeprecatedError as e:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(e))
     except InstanceNotRegisteredError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
