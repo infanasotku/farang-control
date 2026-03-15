@@ -9,5 +9,4 @@ Dockerfile
 LICENSE
 README.md
 ruff.toml
-requirements.txt
 requirements-dev.txt
