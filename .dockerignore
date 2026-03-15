@@ -4,7 +4,6 @@ tests
 .dockerignore
 .git
 .gitignore
-alembic.ini
 Dockerfile
 LICENSE
 README.md
