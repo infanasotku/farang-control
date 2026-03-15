@@ -91,13 +91,6 @@ class EngineInstance:
 
 
 @dataclass
-class RegistrationResult:
-    epoch: int
-    new_instance: EngineInstance | None
-    new_runtime_state: EngineRuntimeState | None
-
-
-@dataclass
 class DerivedEngineStatus:
     liveness: LivenessStatus
     sync: SyncStatus

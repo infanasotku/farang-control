@@ -1,8 +1,17 @@
 from datetime import datetime
 from uuid import UUID
 
+from pydantic.dataclasses import dataclass
+
 from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError
-from app.domains.state import EngineInstance, EngineRuntimeState, LivenessStatus, RegistrationResult
+from app.domains.state import EngineInstance, EngineRuntimeState, LivenessStatus
+
+
+@dataclass
+class RegistrationResult:
+    epoch: int
+    new_instance: EngineInstance | None
+    new_runtime_state: EngineRuntimeState | None
 
 
 def decide_registration(
