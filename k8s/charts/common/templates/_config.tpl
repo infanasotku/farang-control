@@ -9,4 +9,7 @@ data:
   POSTGRES__DATABASE: {{ .Values.config.POSTGRES__DATABASE }}
   POSTGRES__HOST: local.infanasotku.com.
   POSTGRES__PORT: "5430"
+
+  # Admin
+  ADMIN__USERNAME: admin
 {{- end }}
