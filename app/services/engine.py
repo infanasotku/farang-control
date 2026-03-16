@@ -26,8 +26,17 @@ class EngineService:
             await ctx.engines.add(engine)
 
             spec = EngineSpec.initial(engine.id)
-            await ctx.specs.upsert_engine_spec(spec)
+            await ctx.specs.upsert(spec)
             return engine
+
+    async def remove_engine(self, engine_id: UUID) -> None:
+        async with self._uow.begin(with_tx=True) as ctx:
+            engine = await ctx.engines.get_engine_by_id(engine_id)
+            if engine is None:
+                raise EngineNotFoundError(engine_id)
+
+            await ctx.specs.delete_by_engine(engine_id)
+            await ctx.engines.delete(engine_id)
 
     async def get_spec_by_engine(self, engine_id: UUID) -> EngineSpec | None:
         async with self._uow.begin(with_tx=False) as ctx:

@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
@@ -7,6 +7,7 @@ from sqladmin import ModelView
 
 from app.container import Container
 from app.infra.database.models.engine import Engine as EngineModel
+from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.services.engine import EngineService
 
 
@@ -37,8 +38,21 @@ class EngineView(ModelView, model=EngineModel):
         engine = await svc.create_engine(data["name"])
         return EngineModel(id=engine.id)
 
-    async def delete_model(self, request: Request, pk: Any) -> None:
-        return await super().delete_model(request, pk)
+    @inject
+    async def delete_model(
+        self,
+        request: Request,
+        pk: Any,
+        svc: EngineService = Provide[Container.engine_service],
+    ) -> None:
+        return await svc.remove_engine(UUID(pk))
 
-    async def get_detail_value(self, obj: Any, prop: str) -> Tuple[Any, Any]:
-        return await super().get_detail_value(obj, prop)
+
+class EngineSpecView(ModelView, model=EngineSpecModel):
+    can_export = False
+    can_create = False
+    can_delete = False
+    can_edit = False
+
+    column_list = "__all__"
+    form_columns = [EngineSpecModel.config, EngineSpecModel.enabled]

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.engine import Engine, EngineSpec
@@ -34,6 +34,10 @@ class PgEngineTxRepository(PgEngineRepository):
         stmt = update(EngineModel).where(EngineModel.id == engine.id).values(name=engine.name)
         await self._session.execute(stmt)
 
+    async def delete(self, engine_id: UUID) -> None:
+        stmt = delete(EngineModel).where(EngineModel.id == engine_id)
+        await self._session.execute(stmt)
+
     async def get_engine_for_update(self, engine_id: UUID) -> Engine | None:
         stmt = select(EngineModel).where(EngineModel.id == engine_id).with_for_update()
         row = await self._session.scalar(stmt)
@@ -57,7 +61,7 @@ class PgEngineSpecRepository(PostgresRepository):
 
 
 class PgEngineSpecTxRepository(PgEngineSpecRepository):
-    async def upsert_engine_spec(self, create: EngineSpec) -> None:
+    async def upsert(self, create: EngineSpec) -> None:
         stmt = (
             pg_insert(EngineSpecModel)
             .values(
@@ -75,4 +79,8 @@ class PgEngineSpecTxRepository(PgEngineSpecRepository):
                 },
             )
         )
+        await self._session.execute(stmt)
+
+    async def delete_by_engine(self, engine_id: UUID) -> None:
+        stmt = delete(EngineSpecModel).where(EngineSpecModel.engine_id == engine_id)
         await self._session.execute(stmt)
