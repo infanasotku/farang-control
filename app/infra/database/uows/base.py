@@ -2,12 +2,9 @@ import asyncio
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import (
-    AsyncContextManager,
     AsyncIterator,
     Generic,
-    Literal,
     TypeVar,
-    overload,
 )
 
 from sentry_sdk import start_span
@@ -33,12 +30,8 @@ class PgTxUOWContext(PgUOWContext):
         self._transaction = transaction
 
 
-PlainContextT = TypeVar(
-    "PlainContextT", bound=PgUOWContext, covariant=True
-)  # TransactionLessContextT
-TxContextT = TypeVar(
-    "TxContextT", bound=PgTxUOWContext, covariant=True
-)  # TransactionFullContextT
+PlainContextT = TypeVar("PlainContextT", bound=PgUOWContext, covariant=True)  # TransactionLessContextT
+TxContextT = TypeVar("TxContextT", bound=PgTxUOWContext, covariant=True)  # TransactionFullContextT
 
 
 class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
@@ -52,16 +45,10 @@ class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
         self._tx_sessionmaker = tx_sessionmaker
 
     @abstractmethod
-    def _make_tx_ctx(
-        self, *, session: AsyncSession, transaction: AsyncSessionTransaction
-    ) -> TxContextT: ...
+    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> TxContextT: ...
     @abstractmethod
     def _make_plain_ctx(self, *, session: AsyncSession) -> PlainContextT: ...
 
-    @overload
-    async def _start(self, *, with_tx: Literal[True]) -> TxContextT: ...
-    @overload
-    async def _start(self, *, with_tx: Literal[False]) -> PlainContextT: ...
     async def _start(self, *, with_tx: bool) -> TxContextT | PlainContextT:
         if with_tx:
             logger.debug("Opening unit of work with transaction")
@@ -98,16 +85,8 @@ class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
             logger.debug("Closing unit of work session")
             await ctx._session.close()
 
-    @overload
-    def begin(self, *, with_tx: Literal[True]) -> AsyncContextManager[TxContextT]: ...
-    @overload
-    def begin(
-        self, *, with_tx: Literal[False]
-    ) -> AsyncContextManager[PlainContextT]: ...
     @asynccontextmanager
-    async def begin(
-        self, *, with_tx: bool
-    ) -> AsyncIterator[TxContextT | PlainContextT]:
+    async def begin(self, *, with_tx: bool) -> AsyncIterator[TxContextT | PlainContextT]:
         tr_name = "uow_with_transaction" if with_tx else "uow"
         with start_span(op="db", name=tr_name):
             ctx = await self._start(with_tx=with_tx)
