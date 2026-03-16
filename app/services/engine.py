@@ -58,5 +58,7 @@ class EngineService:
                     f"Removing engine spec: engine_id={engine_id} generation={removal_result.spec_to_remove.generation}"
                 )
                 await remove_engine_spec(removal_result.spec_to_remove, ctx=ctx)
+            else:
+                logger.info(f"Engine has no spec to remove: engine_id={engine_id}")
 
         logger.info(f"Engine removed: engine_id={engine_id}")
