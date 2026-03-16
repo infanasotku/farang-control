@@ -31,7 +31,7 @@ def state_service() -> MagicMock:
 
 @fixture()
 def client(engine_service: MagicMock, state_service: MagicMock):
-    Container.spec_service.override(providers.Object(engine_service))
+    Container.engine_service.override(providers.Object(engine_service))
     Container.state_service.override(providers.Object(state_service))
 
     app = create_app()
@@ -41,7 +41,7 @@ def client(engine_service: MagicMock, state_service: MagicMock):
         yield test_client
 
     app.dependency_overrides.clear()
-    Container.spec_service.reset_override()
+    Container.engine_service.reset_override()
     Container.state_service.reset_override()
 
 

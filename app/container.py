@@ -30,5 +30,5 @@ class Container(containers.DeclarativeContainer):
         tx_sessionmaker=tx_sessionmaker,
     )
 
-    spec_service = providers.Factory(EngineService, spec_uow)
+    engine_service = providers.Factory(EngineService, spec_uow)
     state_service = providers.Factory(StateService, state_uow)

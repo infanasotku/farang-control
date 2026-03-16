@@ -18,7 +18,7 @@ logger = get_logger().getChild(__name__)
 @inject
 async def get_engine_spec(
     engine_id: Annotated[UUID, Path(...)],
-    svc: Annotated[EngineService, Depends(Provide[Container.spec_service])],
+    svc: Annotated[EngineService, Depends(Provide[Container.engine_service])],
 ) -> EngineSpecResponse:
     spec = await svc.get_spec_by_engine(engine_id)
     if not spec:

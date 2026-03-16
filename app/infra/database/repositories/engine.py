@@ -1,10 +1,9 @@
 from uuid import UUID
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.engine import Engine, EngineSpec
-from app.dto.core import CreateEngine
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.database.repositories.base import PostgresRepository
@@ -27,8 +26,12 @@ class PgEngineRepository(PostgresRepository):
 
 
 class PgEngineTxRepository(PgEngineRepository):
-    async def add_engine(self, engine: Engine) -> None:
+    async def add(self, engine: Engine) -> None:
         stmt = insert(EngineModel).values(id=engine.id, name=engine.name)
+        await self._session.execute(stmt)
+
+    async def update(self, engine: Engine) -> None:
+        stmt = update(EngineModel).where(EngineModel.id == engine.id).values(name=engine.name)
         await self._session.execute(stmt)
 
     async def get_engine_for_update(self, engine_id: UUID) -> Engine | None:
@@ -54,7 +57,7 @@ class PgEngineSpecRepository(PostgresRepository):
 
 
 class PgEngineSpecTxRepository(PgEngineSpecRepository):
-    async def upsert_engine_spec(self, create: CreateEngine) -> None:
+    async def upsert_engine_spec(self, create: EngineSpec) -> None:
         stmt = (
             pg_insert(EngineSpecModel)
             .values(
