@@ -1,14 +1,18 @@
 from uuid import UUID
 
+from app.contracts.uow import UnitOfWork
 from app.domains.engine import EngineSpec
-from app.infra.database.uows.engine import PgEngineSpecUnitOfWork
+from app.infra.database.uows import (
+    EngineSpecContext,
+    EngineTxSpecContext,
+)
 from app.infra.logging.logger import get_logger
 
 logger = get_logger().getChild(__name__)
 
 
 class SpecService:
-    def __init__(self, uow: PgEngineSpecUnitOfWork) -> None:
+    def __init__(self, uow: UnitOfWork[EngineSpecContext, EngineTxSpecContext]) -> None:
         self._uow = uow
 
     async def get_spec_by_engine(self, engine_id: UUID) -> EngineSpec | None:
