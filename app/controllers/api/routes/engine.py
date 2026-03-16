@@ -8,7 +8,7 @@ from app.container import Container
 from app.controllers.api.schemas.engine import EngineSpecResponse
 from app.controllers.api.utils.auth import authenticate
 from app.infra.logging.logger import get_logger
-from app.services.engine import EngineService
+from app.services.spec import SpecService
 
 router = APIRouter(dependencies=[Depends(authenticate)])
 logger = get_logger().getChild(__name__)
@@ -18,7 +18,7 @@ logger = get_logger().getChild(__name__)
 @inject
 async def get_engine_spec(
     engine_id: Annotated[UUID, Path(...)],
-    svc: Annotated[EngineService, Depends(Provide[Container.engine_service])],
+    svc: Annotated[SpecService, Depends(Provide[Container.spec_service])],
 ) -> EngineSpecResponse:
     logger.info(f"Fetching engine spec: engine_id={engine_id}")
     spec = await svc.get_spec_by_engine(engine_id)
