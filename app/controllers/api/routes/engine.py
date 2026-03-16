@@ -20,10 +20,12 @@ async def get_engine_spec(
     engine_id: Annotated[UUID, Path(...)],
     svc: Annotated[EngineService, Depends(Provide[Container.engine_service])],
 ) -> EngineSpecResponse:
+    logger.info(f"Fetching engine spec: engine_id={engine_id}")
     spec = await svc.get_spec_by_engine(engine_id)
     if not spec:
+        logger.warning(f"Engine spec is not found: engine_id={engine_id}")
         raise HTTPException(status_code=404, detail="Engine spec is not found")
 
-    logger.info(f"Engine spec is retrieved: engine_id={engine_id}")
+    logger.info(f"Engine spec is retrieved: engine_id={engine_id} generation={spec.generation}")
 
     return EngineSpecResponse.model_validate(spec)

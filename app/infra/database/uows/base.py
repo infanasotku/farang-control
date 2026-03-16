@@ -17,6 +17,10 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
+from app.infra.logging.logger import get_logger
+
+logger = get_logger().getChild(__name__)
+
 
 class PgUOWContext:
     def __init__(self, *, session: AsyncSession):
@@ -60,10 +64,12 @@ class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
     async def _start(self, *, with_tx: Literal[False]) -> PlainContextT: ...
     async def _start(self, *, with_tx: bool) -> TxContextT | PlainContextT:
         if with_tx:
+            logger.debug("Opening unit of work with transaction")
             session = self._tx_sessionmaker()
             transatcion = await session.begin()
             return self._make_tx_ctx(session=session, transaction=transatcion)
         else:
+            logger.debug("Opening unit of work without transaction")
             session = self._plain_sessionmaker()
             return self._make_plain_ctx(session=session)
 
@@ -76,17 +82,20 @@ class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
         try:
             if exc is None:
                 if isinstance(ctx, PgTxUOWContext):
+                    logger.debug("Committing unit of work transaction")
                     await ctx._transaction.commit()
             else:
                 raise exc
         except BaseException:
             if isinstance(ctx, PgTxUOWContext):
                 try:
+                    logger.warning("Rolling back unit of work transaction")
                     await ctx._session.rollback()
                 except Exception:
                     pass
             raise
         finally:
+            logger.debug("Closing unit of work session")
             await ctx._session.close()
 
     @overload

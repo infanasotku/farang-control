@@ -29,15 +29,26 @@ async def register_engine_instance(
     engine_id: Annotated[UUID, Path(...)],
     svc: Annotated[StateService, Depends(Provide[Container.state_service])],
 ) -> RegisterEngineInstanceResponse:
+    logger.info(f"Register instance requested: engine_id={engine_id} instance_id={instance_id}")
     try:
         epoch = await svc.register_instance(instance_id=instance_id, engine_id=engine_id)
     except InstanceDeprecatedError as e:
+        logger.warning(f"Register instance rejected as deprecated: engine_id={engine_id} instance_id={instance_id}")
         raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(e))
     except CurrentInstanceAliveError as e:
+        logger.warning(
+            f"Register instance rejected because current owner is alive: engine_id={engine_id} instance_id={instance_id}",
+            engine_id,
+            instance_id,
+        )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except EngineNotFoundError as e:
+        logger.warning(
+            f"Register instance failed because engine was not found: engine_id={engine_id} instance_id={instance_id}"
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+    logger.info(f"Register instance succeeded: engine_id={engine_id} instance_id={instance_id} epoch={epoch}")
     return RegisterEngineInstanceResponse(epoch=epoch)
 
 
@@ -48,6 +59,9 @@ async def heartbeat(
     engine_id: Annotated[UUID, Path(...)],
     svc: Annotated[StateService, Depends(Provide[Container.state_service])],
 ):
+    logger.info(
+        f"Heartbeat received: engine_id={engine_id} instance_id={payload.instance_id} epoch={payload.epoch} seq_no={payload.seq_no} generation={payload.generation}"
+    )
     cmd = ApplyHeartbeatCmd(
         engine_id=engine_id,
         instance_id=payload.instance_id,
@@ -59,6 +73,14 @@ async def heartbeat(
     try:
         await svc.apply_heartbeat(cmd)
     except EngineNotFoundError as e:
+        logger.warning(
+            f"Heartbeat failed because engine was not found: engine_id={engine_id} instance_id={payload.instance_id}"
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InstanceNotRegisteredError as e:
+        logger.warning(
+            f"Heartbeat rejected because instance is not registered: engine_id={engine_id} instance_id={payload.instance_id}"
+        )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    logger.info(f"Heartbeat processed: engine_id={engine_id} instance_id={payload.instance_id} seq_no={payload.seq_no}")

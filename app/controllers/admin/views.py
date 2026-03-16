@@ -8,7 +8,10 @@ from sqladmin import ModelView
 from app.container import Container
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
+from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
+
+logger = get_logger().getChild(__name__)
 
 
 class EngineView(ModelView, model=EngineModel):
@@ -25,6 +28,7 @@ class EngineView(ModelView, model=EngineModel):
         data: dict,
         svc: EngineService = Provide[Container.engine_service],
     ) -> Any:
+        logger.info(f"Admin updating engine: engine_id={pk}")
         await svc.update_engine(UUID(pk), data["name"])
         return EngineModel(id=pk)
 
@@ -35,7 +39,9 @@ class EngineView(ModelView, model=EngineModel):
         data: dict,
         svc: EngineService = Provide[Container.engine_service],
     ) -> Any:
+        logger.info(f"Admin creating engine: name={data['name']}")
         engine = await svc.create_engine(data["name"])
+        logger.info(f"Admin created engine: engine_id={engine.id}")
         return EngineModel(id=engine.id)
 
     @inject
@@ -45,6 +51,7 @@ class EngineView(ModelView, model=EngineModel):
         pk: Any,
         svc: EngineService = Provide[Container.engine_service],
     ) -> None:
+        logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
 
 
