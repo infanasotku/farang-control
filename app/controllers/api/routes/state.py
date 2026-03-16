@@ -8,6 +8,7 @@ from app.container import Container
 from app.controllers.api.schemas.engine import RegisterEngineInstanceResponse
 from app.controllers.api.schemas.state import HeartbeatRequest
 from app.controllers.api.utils.auth import authenticate
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.exceptions.state import (
     CurrentInstanceAliveError,
     InstanceDeprecatedError,
@@ -15,7 +16,6 @@ from app.domains.exceptions.state import (
 )
 from app.dto.state import ApplyHeartbeatCmd
 from app.infra.logging.logger import get_logger
-from app.services.exceptions.engine import EngineNotFoundError
 from app.services.state import StateService
 
 router = APIRouter(dependencies=[Depends(authenticate)])

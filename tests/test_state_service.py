@@ -5,10 +5,10 @@ import pytest
 from mock import AsyncMock, MagicMock, patch
 from pytest import fixture
 
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError, InstanceNotRegisteredError
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 from app.dto.state import ApplyHeartbeatCmd
-from app.services.exceptions.engine import EngineNotFoundError
 from app.services.state import StateService
 
 

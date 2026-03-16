@@ -1,13 +1,13 @@
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.func.heartbeat import apply_heartbeat
 from app.domains.func.registration import decide_registration
 from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import StateContext, StateTxContext
 from app.infra.logging.logger import get_logger
-from app.services.exceptions.engine import EngineNotFoundError
 
 logger = get_logger().getChild(__name__)
 

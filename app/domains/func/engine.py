@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.domains.engine import Engine, EngineSpec
-from app.services.exceptions.engine import EngineNotFoundError
+from app.domains.exceptions.engine import EngineNotFoundError
 
 
 @dataclass

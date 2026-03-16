@@ -8,10 +8,10 @@ from pytest import fixture
 from app.container import Container
 from app.controllers.api.utils.auth import authenticate
 from app.domains.engine import EngineSpec
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError, InstanceNotRegisteredError
 from app.domains.state import InstancePhase
 from app.entrypoints.api import create_app
-from app.services.exceptions.engine import EngineNotFoundError
 
 
 @fixture()
