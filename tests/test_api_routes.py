@@ -17,7 +17,6 @@ from app.services.exceptions.engine import EngineNotFoundError
 @fixture()
 def engine_service() -> MagicMock:
     svc = MagicMock()
-    svc.get_spec_by_engine = AsyncMock()
     return svc
 
 
@@ -30,9 +29,17 @@ def state_service() -> MagicMock:
 
 
 @fixture()
-def client(engine_service: MagicMock, state_service: MagicMock):
+def spec_service() -> MagicMock:
+    svc = MagicMock()
+    svc.get_spec_by_engine = AsyncMock()
+    return svc
+
+
+@fixture()
+def client(engine_service: MagicMock, state_service: MagicMock, spec_service: MagicMock):
     Container.engine_service.override(providers.Object(engine_service))
     Container.state_service.override(providers.Object(state_service))
+    Container.spec_service.override(providers.Object(spec_service))
 
     app = create_app()
     app.dependency_overrides[authenticate] = lambda: None
@@ -43,10 +50,11 @@ def client(engine_service: MagicMock, state_service: MagicMock):
     app.dependency_overrides.clear()
     Container.engine_service.reset_override()
     Container.state_service.reset_override()
+    Container.spec_service.reset_override()
 
 
 class TestGetEngineSpecRoute:
-    def test_returns_spec_when_found(self, client: TestClient, engine_service: MagicMock):
+    def test_returns_spec_when_found(self, client: TestClient, spec_service: MagicMock):
         engine_id = uuid4()
         spec = EngineSpec(
             engine_id=engine_id,
@@ -54,7 +62,7 @@ class TestGetEngineSpecRoute:
             enabled=True,
             generation=12,
         )
-        engine_service.get_spec_by_engine.return_value = spec
+        spec_service.get_spec_by_engine.return_value = spec
 
         response = client.get(f"/api/v1/engines/{engine_id}/spec")
 
@@ -66,23 +74,23 @@ class TestGetEngineSpecRoute:
             "generation": 12,
             "config_hash": spec.config_hash,
         }
-        engine_service.get_spec_by_engine.assert_awaited_once_with(engine_id)
+        spec_service.get_spec_by_engine.assert_awaited_once_with(engine_id)
 
-    def test_returns_404_when_spec_is_not_found(self, client: TestClient, engine_service: MagicMock):
+    def test_returns_404_when_spec_is_not_found(self, client: TestClient, spec_service: MagicMock):
         engine_id = uuid4()
-        engine_service.get_spec_by_engine.return_value = None
+        spec_service.get_spec_by_engine.return_value = None
 
         response = client.get(f"/api/v1/engines/{engine_id}/spec")
 
         assert response.status_code == 404
         assert response.json() == {"detail": "Engine spec is not found"}
-        engine_service.get_spec_by_engine.assert_awaited_once_with(engine_id)
+        spec_service.get_spec_by_engine.assert_awaited_once_with(engine_id)
 
-    def test_returns_422_for_invalid_engine_id(self, client: TestClient, engine_service: MagicMock):
+    def test_returns_422_for_invalid_engine_id(self, client: TestClient, spec_service: MagicMock):
         response = client.get("/api/v1/engines/not-a-uuid/spec")
 
         assert response.status_code == 422
-        engine_service.get_spec_by_engine.assert_not_called()
+        spec_service.get_spec_by_engine.assert_not_called()
 
 
 class TestRegisterEngineInstanceRoute:
