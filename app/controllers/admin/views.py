@@ -69,6 +69,10 @@ class EngineSpecView(ModelView, model=EngineSpecModel):
         EngineSpecModel.enabled,
     ]
 
+    column_formatters = {
+        "config": lambda *_: "<COLLAPSED>",
+    }
+
     @inject
     async def update_model(
         self,
