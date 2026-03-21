@@ -6,6 +6,9 @@ from fastapi.security import APIKeyHeader
 
 from app.container import Container
 from app.infra.config.auth import AuthSettings
+from app.infra.logging.logger import get_logger
+
+logger = get_logger().getChild(__name__)
 
 api_key_scheme = APIKeyHeader(
     name="X-API-Key",
@@ -21,13 +24,17 @@ async def authenticate(
     settings: Annotated[AuthSettings, Depends(Provide[Container.auth_settings])],
 ):
     if not api_key:
+        logger.warning("API authentication failed: missing API key")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="API key is missing",
         )
 
     if api_key != settings.edge_api_key:
+        logger.warning("API authentication failed: invalid API key")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
         )
+
+    logger.info("API authentication succeeded")

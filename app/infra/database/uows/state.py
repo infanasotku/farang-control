@@ -1,3 +1,5 @@
+from typing import Protocol
+
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
 from app.infra.database.repositories.engine import PgEngineRepository, PgEngineTxRepository
@@ -10,7 +12,19 @@ from app.infra.database.repositories.state import (
 from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
 
 
-class StateContext(PgUOWContext):
+class StateContext(Protocol):
+    engines: PgEngineRepository
+    states: PgStateRepository
+    instances: PgInstanceRepository
+
+
+class StateTxContext(Protocol):
+    engines: PgEngineTxRepository
+    states: PgStateTxRepository
+    instances: PgInstanceTxRepository
+
+
+class PgStateContext(PgUOWContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
         self.engines = PgEngineRepository(session)
@@ -18,7 +32,7 @@ class StateContext(PgUOWContext):
         self.instances = PgInstanceRepository(session)
 
 
-class StateTxContext(PgTxUOWContext):
+class PgStateTxContext(PgTxUOWContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
         self.engines = PgEngineTxRepository(session)
@@ -26,9 +40,9 @@ class StateTxContext(PgTxUOWContext):
         self.instances = PgInstanceTxRepository(session)
 
 
-class PgStateUnitOfWork(PgUnitOfWork[StateContext, StateTxContext]):
-    def _make_plain_ctx(self, *, session: AsyncSession) -> StateContext:
-        return StateContext(session=session)
+class PgStateUnitOfWork(PgUnitOfWork[PgStateContext, PgStateTxContext]):
+    def _make_plain_ctx(self, *, session: AsyncSession) -> PgStateContext:
+        return PgStateContext(session=session)
 
-    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> StateTxContext:
-        return StateTxContext(session=session, transaction=transaction)
+    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgStateTxContext:
+        return PgStateTxContext(session=session, transaction=transaction)
