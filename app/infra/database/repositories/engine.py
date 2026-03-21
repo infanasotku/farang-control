@@ -96,3 +96,9 @@ class PgEngineSpecTxRepository(PgEngineSpecRepository):
         logger.debug(f"Deleting engine spec: engine_id={engine_id}")
         stmt = delete(EngineSpecModel).where(EngineSpecModel.engine_id == engine_id)
         await self._session.execute(stmt)
+
+    async def get_engine_spec_for_update(self, engine_id: UUID) -> EngineSpec | None:
+        logger.debug(f"Loading engine spec for update: engine_id={engine_id}")
+        stmt = select(EngineSpecModel).where(EngineSpecModel.engine_id == engine_id).with_for_update()
+        row = await self._session.scalar(stmt)
+        return engine_spec_from_model(row) if row else None

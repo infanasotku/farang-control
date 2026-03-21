@@ -35,3 +35,10 @@ class EngineSpec:
             enabled=False,
             generation=0,
         )
+
+    def update(self, *, config: dict | None = None, enabled: bool | None = None) -> None:
+        if config is not None:
+            self.config = config
+        if enabled is not None:
+            self.enabled = enabled
+        self.generation += 1

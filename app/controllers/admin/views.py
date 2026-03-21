@@ -6,10 +6,12 @@ from fastapi import Request
 from sqladmin import ModelView
 
 from app.container import Container
+from app.dto.spec import UpdateSpecCmd
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
+from app.services.spec import SpecService
 
 logger = get_logger().getChild(__name__)
 
@@ -59,7 +61,37 @@ class EngineSpecView(ModelView, model=EngineSpecModel):
     can_export = False
     can_create = False
     can_delete = False
-    can_edit = False
+    can_edit = True
 
     column_list = "__all__"
-    form_columns = [EngineSpecModel.config, EngineSpecModel.enabled]
+    form_columns = [
+        EngineSpecModel.config,
+        EngineSpecModel.enabled,
+    ]
+
+    @inject
+    async def update_model(
+        self,
+        request: Request,
+        pk: str,
+        data: dict,
+        svc: SpecService = Provide[Container.spec_service],
+    ) -> Any:
+        # Workaround is caused by the fact that sqladmin uses direct
+        # SQLAlchemy Core queries to fetch the object,
+        # which bypasses the service layer and thus the domain logic.
+        async with self.session_maker() as session:
+            stmt = self._stmt_by_identifier(pk)
+            spec: EngineSpecModel | None = await session.scalar(stmt)
+            if not spec:
+                raise ValueError("Engine spec not found")
+
+        logger.info(f"Admin updating engine spec: engine_id={pk}")
+        await svc.update_spec(
+            UpdateSpecCmd(
+                engine_id=spec.engine_id,
+                config=data.get("config"),
+                enabled=data.get("enabled"),
+            )
+        )
+        return EngineSpecModel()
