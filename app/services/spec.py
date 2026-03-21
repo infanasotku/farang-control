@@ -26,12 +26,18 @@ class SpecService:
             return spec
 
     async def update_spec(self, cmd: UpdateSpecCmd):
+        logger.info(f"Updating engine spec: engine_id={cmd.engine_id}")
         async with self._uow.begin(with_tx=True) as ctx:
             spec = await ctx.specs.get_engine_spec_for_update(cmd.engine_id)
             if spec is None:
+                logger.warning(f"Update engine spec failed because spec was not found: engine_id={cmd.engine_id}")
                 raise EngineSpecNotFoundError(cmd.engine_id)
 
+            previous_generation = spec.generation
             spec.update(config=cmd.config, enabled=cmd.enabled)
+            logger.info(
+                f"Engine spec update prepared: engine_id={cmd.engine_id} changed={spec.generation != previous_generation} previous_generation={previous_generation} next_generation={spec.generation}"
+            )
             await upsert_engine_spec(spec, ctx=ctx)
 
         logger.info(f"Engine spec updated: engine_id={cmd.engine_id} generation={spec.generation}")

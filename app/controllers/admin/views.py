@@ -90,7 +90,7 @@ class EngineSpecView(ModelView, model=EngineSpecModel):
             if not spec:
                 raise ValueError("Engine spec not found")
 
-        logger.info(f"Admin updating engine spec: engine_id={pk}")
+        logger.info(f"Admin updating engine spec: engine_id={spec.engine_id}")
         await svc.update_spec(
             UpdateSpecCmd(
                 engine_id=spec.engine_id,
@@ -98,4 +98,4 @@ class EngineSpecView(ModelView, model=EngineSpecModel):
                 enabled=data.get("enabled"),
             )
         )
-        return EngineSpecModel()
+        return EngineSpecModel(id=int(pk))

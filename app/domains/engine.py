@@ -24,7 +24,11 @@ class EngineSpec:
 
     @property
     def config_hash(self) -> str:
-        dump = json.dumps(self.config, sort_keys=True)
+        return self._calc_config_hash(self.config)
+
+    @staticmethod
+    def _calc_config_hash(config: dict) -> str:
+        dump = json.dumps(config, sort_keys=True)
         return hashlib.sha256(dump.encode()).hexdigest()
 
     @classmethod
@@ -37,8 +41,13 @@ class EngineSpec:
         )
 
     def update(self, *, config: dict | None = None, enabled: bool | None = None) -> None:
-        if config is not None:
-            self.config = config
-        if enabled is not None:
-            self.enabled = enabled
-        self.generation += 1
+        new_config = self.config if config is None else config
+        new_enabled = self.enabled if enabled is None else enabled
+
+        changed = new_enabled != self.enabled or self._calc_config_hash(new_config) != self.config_hash
+
+        self.config = new_config
+        self.enabled = new_enabled
+
+        if changed:
+            self.generation += 1
