@@ -42,7 +42,7 @@ class TestGetSpecByEngine(SpecServiceDeps):
         result = await self.svc.get_spec_by_engine(engine_id)
 
         assert result == spec
-        uow.begin.assert_called_once_with(with_tx=False)
+        uow.begin.assert_called_once_with(write=False)
         spec_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
@@ -52,7 +52,7 @@ class TestGetSpecByEngine(SpecServiceDeps):
         result = await self.svc.get_spec_by_engine(engine_id)
 
         assert result is None
-        uow.begin.assert_called_once_with(with_tx=False)
+        uow.begin.assert_called_once_with(write=False)
         spec_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
 
 
@@ -80,7 +80,7 @@ class TestUpdateSpec(SpecServiceDeps):
         assert spec.config == {"foo": "baz"}
         assert spec.enabled is False
         assert spec.generation == 8
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_awaited_once_with(spec, ctx=spec_ctx)
 
@@ -111,7 +111,7 @@ class TestUpdateSpec(SpecServiceDeps):
         assert spec.config == {"foo": "bar"}
         assert spec.enabled is True
         assert spec.generation == 7
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_awaited_once_with(spec, ctx=spec_ctx)
 
@@ -128,6 +128,6 @@ class TestUpdateSpec(SpecServiceDeps):
             with pytest.raises(EngineSpecNotFoundError):
                 await self.svc.update_spec(cmd)
 
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_not_awaited()

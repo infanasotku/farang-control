@@ -4,7 +4,7 @@ from app.contracts.uow import UnitOfWork
 from app.domains.engine import Engine
 from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.func import engine as engine_func
-from app.infra.database.uows import EngineContext, EngineTxContext
+from app.infra.database.uows import EngineReadContext, EngineWriteContext
 from app.infra.logging.logger import get_logger
 from app.services.shared.spec import remove_engine_spec, upsert_engine_spec
 
@@ -12,12 +12,12 @@ logger = get_logger().getChild(__name__)
 
 
 class EngineService:
-    def __init__(self, uow: UnitOfWork[EngineContext, EngineTxContext]) -> None:
+    def __init__(self, uow: UnitOfWork[EngineReadContext, EngineWriteContext]) -> None:
         self._uow = uow
 
     async def update_engine(self, engine_id: UUID, name: str) -> Engine:
         logger.info(f"Updating engine: engine_id={engine_id}")
-        async with self._uow.begin(with_tx=True) as ctx:
+        async with self._uow.begin(write=True) as ctx:
             engine = await ctx.engines.get_engine_by_id(engine_id)
             if engine is None:
                 logger.warning(f"Update engine failed because engine was not found: engine_id={engine_id}")
@@ -30,7 +30,7 @@ class EngineService:
 
     async def create_engine(self, name: str) -> Engine:
         logger.info(f"Creating engine: name={name}")
-        async with self._uow.begin(with_tx=True) as ctx:
+        async with self._uow.begin(write=True) as ctx:
             creation_result = engine_func.create_engine(name)
 
             await ctx.engines.add(creation_result.engine)
@@ -41,7 +41,7 @@ class EngineService:
 
     async def remove_engine(self, engine_id: UUID) -> None:
         logger.info(f"Removing engine: engine_id={engine_id}")
-        async with self._uow.begin(with_tx=True) as ctx:
+        async with self._uow.begin(write=True) as ctx:
             engine = await ctx.engines.get_engine_by_id(engine_id)
             spec = await ctx.specs.get_engine_spec(engine_id)
 

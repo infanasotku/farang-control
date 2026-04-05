@@ -5,39 +5,39 @@ from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 from app.infra.database.repositories.engine import (
     PgEngineRepository,
     PgEngineSpecRepository,
-    PgEngineSpecTxRepository,
-    PgEngineTxRepository,
+    PgEngineSpecWriteRepository,
+    PgEngineWriteRepository,
 )
-from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
+from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
-class EngineContext(Protocol):
+class EngineReadContext(Protocol):
     specs: PgEngineSpecRepository
     engines: PgEngineRepository
 
 
-class EngineTxContext(Protocol):
-    specs: PgEngineSpecTxRepository
-    engines: PgEngineTxRepository
+class EngineWriteContext(Protocol):
+    specs: PgEngineSpecWriteRepository
+    engines: PgEngineWriteRepository
 
 
-class PgEngineContext(PgUOWContext):
+class PgEngineReadContext(PgReadUOWContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
         self.specs = PgEngineSpecRepository(session)
         self.engines = PgEngineRepository(session)
 
 
-class PgEngineTxContext(PgTxUOWContext):
+class PgEngineWriteContext(PgWriteUOWContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
-        self.specs = PgEngineSpecTxRepository(session)
-        self.engines = PgEngineTxRepository(session)
+        self.specs = PgEngineSpecWriteRepository(session)
+        self.engines = PgEngineWriteRepository(session)
 
 
-class PgEngineUnitOfWork(PgUnitOfWork[PgEngineContext, PgEngineTxContext]):
-    def _make_plain_ctx(self, *, session: AsyncSession) -> PgEngineContext:
-        return PgEngineContext(session=session)
+class PgEngineUnitOfWork(PgUnitOfWork[PgEngineReadContext, PgEngineWriteContext]):
+    def _make_read_ctx(self, *, session: AsyncSession) -> PgEngineReadContext:
+        return PgEngineReadContext(session=session)
 
-    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgEngineTxContext:
-        return PgEngineTxContext(session=session, transaction=transaction)
+    def _make_write_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgEngineWriteContext:
+        return PgEngineWriteContext(session=session, transaction=transaction)

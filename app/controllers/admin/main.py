@@ -18,7 +18,7 @@ def register_admin(
     username: str,
     password: str,
     secret: str,
-    engine: AsyncEngine = Provide[Container.plain_engine],
+    engine: AsyncEngine = Provide[Container.read_engine],
 ):
     logger.info("Registering admin panel")
     authentication_backend = AdminAuthenticationBackend(secret, username=username, password=password)

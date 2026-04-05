@@ -30,7 +30,7 @@ class PgEngineRepository(PostgresRepository):
         return engine_from_model(row) if row else None
 
 
-class PgEngineTxRepository(PgEngineRepository):
+class PgEngineWriteRepository(PgEngineRepository):
     async def add(self, engine: Engine) -> None:
         logger.debug(f"Inserting engine: engine_id={engine.id}")
         stmt = insert(EngineModel).values(id=engine.id, name=engine.name)
@@ -70,7 +70,7 @@ class PgEngineSpecRepository(PostgresRepository):
         return engine_spec_from_model(row) if row else None
 
 
-class PgEngineSpecTxRepository(PgEngineSpecRepository):
+class PgEngineSpecWriteRepository(PgEngineSpecRepository):
     async def upsert(self, create: EngineSpec) -> None:
         logger.debug(f"Upserting engine spec: engine_id={create.engine_id} generation={create.generation}")
         stmt = (

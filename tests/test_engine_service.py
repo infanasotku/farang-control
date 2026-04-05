@@ -41,7 +41,7 @@ class TestUpdateEngine(EngineServiceDeps):
 
         assert result is engine
         assert engine.name == "new-name"
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.engines.update.assert_awaited_once_with(engine)
 
@@ -52,7 +52,7 @@ class TestUpdateEngine(EngineServiceDeps):
         with pytest.raises(EngineNotFoundError):
             await self.svc.update_engine(engine_id, "new-name")
 
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.engines.update.assert_not_awaited()
 
@@ -63,7 +63,7 @@ class TestCreateEngine(EngineServiceDeps):
         with patch("app.services.engine.upsert_engine_spec", new=AsyncMock()) as upsert_spec_mock:
             result = await self.svc.create_engine("test-engine")
 
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.add.assert_awaited_once_with(result)
         assert result.name == "test-engine"
 
@@ -82,7 +82,7 @@ class TestRemoveEngine(EngineServiceDeps):
         with pytest.raises(EngineNotFoundError):
             await self.svc.remove_engine(engine_id)
 
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         engine_ctx.engines.delete.assert_not_awaited()
@@ -99,7 +99,7 @@ class TestRemoveEngine(EngineServiceDeps):
             result = await self.svc.remove_engine(engine_id)
 
         assert result is None
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         engine_ctx.engines.delete.assert_awaited_once_with(engine_id)
@@ -120,6 +120,6 @@ class TestRemoveEngine(EngineServiceDeps):
             result = await self.svc.remove_engine(engine_id)
 
         assert result is None
-        uow.begin.assert_called_once_with(with_tx=True)
+        uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.delete.assert_awaited_once_with(engine_id)
         remove_spec_mock.assert_not_awaited()

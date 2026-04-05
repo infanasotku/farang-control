@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import (
     AsyncIterator,
-    Generic,
     TypeVar,
 )
 
@@ -19,62 +18,62 @@ from app.infra.logging.logger import get_logger
 logger = get_logger().getChild(__name__)
 
 
-class PgUOWContext:
+class PgReadUOWContext:
     def __init__(self, *, session: AsyncSession):
         self._session = session
 
 
-class PgTxUOWContext(PgUOWContext):
+class PgWriteUOWContext(PgReadUOWContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session)
         self._transaction = transaction
 
 
-PlainContextT = TypeVar("PlainContextT", bound=PgUOWContext, covariant=True)  # TransactionLessContextT
-TxContextT = TypeVar("TxContextT", bound=PgTxUOWContext, covariant=True)  # TransactionFullContextT
+ReadContextT = TypeVar("ReadContextT", bound=PgReadUOWContext, covariant=True)
+WriteContextT = TypeVar("WriteContextT", bound=PgWriteUOWContext, covariant=True)
 
 
-class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
+class PgUnitOfWork[ReadContextT: PgReadUOWContext, WriteContextT: PgWriteUOWContext](ABC):
     def __init__(
         self,
         *,
-        plain_sessionmaker: async_sessionmaker[AsyncSession],
-        tx_sessionmaker: async_sessionmaker[AsyncSession],
+        read_sessionmaker: async_sessionmaker[AsyncSession],
+        write_sessionmaker: async_sessionmaker[AsyncSession],
     ) -> None:
-        self._plain_sessionmaker = plain_sessionmaker
-        self._tx_sessionmaker = tx_sessionmaker
+        self._read_sessionmaker = read_sessionmaker
+        self._write_sessionmaker = write_sessionmaker
 
     @abstractmethod
-    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> TxContextT: ...
+    def _make_write_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> WriteContextT: ...
     @abstractmethod
-    def _make_plain_ctx(self, *, session: AsyncSession) -> PlainContextT: ...
+    def _make_read_ctx(self, *, session: AsyncSession) -> ReadContextT: ...
 
-    async def _start(self, *, with_tx: bool) -> TxContextT | PlainContextT:
-        if with_tx:
-            logger.debug("Opening unit of work with transaction")
-            session = self._tx_sessionmaker()
-            transatcion = await session.begin()
-            return self._make_tx_ctx(session=session, transaction=transatcion)
+    async def _start(self, *, write: bool) -> WriteContextT | ReadContextT:
+        if write:
+            logger.debug("Opening write unit of work with transaction")
+            session = self._write_sessionmaker()
+            transaction = await session.begin()
+            return self._make_write_ctx(session=session, transaction=transaction)
         else:
-            logger.debug("Opening unit of work without transaction")
-            session = self._plain_sessionmaker()
-            return self._make_plain_ctx(session=session)
+            logger.debug("Opening read unit of work without transaction")
+            session = self._read_sessionmaker()
+            return self._make_read_ctx(session=session)
 
     async def _finish(
         self,
         exc: BaseException | None,
         *,
-        ctx: TxContextT | PlainContextT,
+        ctx: WriteContextT | ReadContextT,
     ):
         try:
             if exc is None:
-                if isinstance(ctx, PgTxUOWContext):
+                if isinstance(ctx, PgWriteUOWContext):
                     logger.debug("Committing unit of work transaction")
                     await ctx._transaction.commit()
             else:
                 raise exc
         except BaseException:
-            if isinstance(ctx, PgTxUOWContext):
+            if isinstance(ctx, PgWriteUOWContext):
                 try:
                     logger.warning("Rolling back unit of work transaction")
                     await ctx._session.rollback()
@@ -86,10 +85,10 @@ class PgUnitOfWork(ABC, Generic[PlainContextT, TxContextT]):
             await ctx._session.close()
 
     @asynccontextmanager
-    async def begin(self, *, with_tx: bool) -> AsyncIterator[TxContextT | PlainContextT]:
-        tr_name = "uow_with_transaction" if with_tx else "uow"
+    async def begin(self, *, write: bool) -> AsyncIterator[WriteContextT | ReadContextT]:
+        tr_name = "uow_with_write_transaction" if write else "uow"
         with start_span(op="db", name=tr_name):
-            ctx = await self._start(with_tx=with_tx)
+            ctx = await self._start(write=write)
             try:
                 yield ctx
             except BaseException as ex:  # With CancelledError

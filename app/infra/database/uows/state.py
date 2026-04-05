@@ -2,29 +2,29 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
-from app.infra.database.repositories.engine import PgEngineRepository, PgEngineTxRepository
+from app.infra.database.repositories.engine import PgEngineRepository, PgEngineWriteRepository
 from app.infra.database.repositories.state import (
     PgInstanceRepository,
-    PgInstanceTxRepository,
+    PgInstanceWriteRepository,
     PgStateRepository,
-    PgStateTxRepository,
+    PgStateWriteRepository,
 )
-from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
+from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
-class StateContext(Protocol):
+class StateReadContext(Protocol):
     engines: PgEngineRepository
     states: PgStateRepository
     instances: PgInstanceRepository
 
 
-class StateTxContext(Protocol):
-    engines: PgEngineTxRepository
-    states: PgStateTxRepository
-    instances: PgInstanceTxRepository
+class StateWriteContext(Protocol):
+    engines: PgEngineWriteRepository
+    states: PgStateWriteRepository
+    instances: PgInstanceWriteRepository
 
 
-class PgStateContext(PgUOWContext):
+class PgStateReadContext(PgReadUOWContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
         self.engines = PgEngineRepository(session)
@@ -32,17 +32,17 @@ class PgStateContext(PgUOWContext):
         self.instances = PgInstanceRepository(session)
 
 
-class PgStateTxContext(PgTxUOWContext):
+class PgStateWriteContext(PgWriteUOWContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
-        self.engines = PgEngineTxRepository(session)
-        self.states = PgStateTxRepository(session)
-        self.instances = PgInstanceTxRepository(session)
+        self.engines = PgEngineWriteRepository(session)
+        self.states = PgStateWriteRepository(session)
+        self.instances = PgInstanceWriteRepository(session)
 
 
-class PgStateUnitOfWork(PgUnitOfWork[PgStateContext, PgStateTxContext]):
-    def _make_plain_ctx(self, *, session: AsyncSession) -> PgStateContext:
-        return PgStateContext(session=session)
+class PgStateUnitOfWork(PgUnitOfWork[PgStateReadContext, PgStateWriteContext]):
+    def _make_read_ctx(self, *, session: AsyncSession) -> PgStateReadContext:
+        return PgStateReadContext(session=session)
 
-    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgStateTxContext:
-        return PgStateTxContext(session=session, transaction=transaction)
+    def _make_write_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgStateWriteContext:
+        return PgStateWriteContext(session=session, transaction=transaction)
