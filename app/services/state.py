@@ -6,14 +6,14 @@ from app.domains.func.heartbeat import apply_heartbeat
 from app.domains.func.registration import decide_registration
 from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
-from app.infra.database.uows.state import StateContext, StateTxContext
+from app.infra.database.uows.state import StateReadContext, StateWriteContext
 from app.infra.logging.logger import get_logger
 
 logger = get_logger().getChild(__name__)
 
 
 class StateService:
-    def __init__(self, uow: UnitOfWork[StateContext, StateTxContext]) -> None:
+    def __init__(self, uow: UnitOfWork[StateReadContext, StateWriteContext]) -> None:
         self._uow = uow
 
     async def register_instance(self, *, instance_id: UUID, engine_id: UUID) -> int:
@@ -26,7 +26,7 @@ class StateService:
             CurrentInstanceAliveError: if the current instance is still alive (not DEAD) and a new instance is being requested.
         """
         logger.info(f"Registering instance: engine_id={engine_id} instance_id={instance_id}")
-        async with self._uow.begin(with_tx=True) as ctx:
+        async with self._uow.begin(write=True) as ctx:
             # Serialize registrations for the same engine,
             # including the first one when state does not exist yet.
             engine = await ctx.engines.get_engine_for_update(engine_id)
@@ -76,7 +76,7 @@ class StateService:
         logger.info(
             f"Applying heartbeat: engine_id={cmd.engine_id} instance_id={cmd.instance_id} epoch={cmd.epoch} seq_no={cmd.seq_no} generation={cmd.generation}"
         )
-        async with self._uow.begin(with_tx=True) as ctx:
+        async with self._uow.begin(write=True) as ctx:
             engine = await ctx.engines.get_engine_by_id(cmd.engine_id)
             if engine is None:
                 logger.warning(

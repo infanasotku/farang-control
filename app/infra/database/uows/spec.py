@@ -4,34 +4,36 @@ from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
 from app.infra.database.repositories.engine import (
     PgEngineSpecRepository,
-    PgEngineSpecTxRepository,
+    PgEngineSpecWriteRepository,
 )
-from app.infra.database.uows.base import PgTxUOWContext, PgUnitOfWork, PgUOWContext
+from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
-class EngineSpecContext(Protocol):
+class EngineSpecReadContext(Protocol):
     specs: PgEngineSpecRepository
 
 
-class EngineTxSpecContext(Protocol):
-    specs: PgEngineSpecTxRepository
+class EngineWriteSpecContext(Protocol):
+    specs: PgEngineSpecWriteRepository
 
 
-class PgEngineSpecContext(PgUOWContext, EngineSpecContext):
+class PgEngineSpecReadContext(PgReadUOWContext, EngineSpecReadContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
         self.specs = PgEngineSpecRepository(session)
 
 
-class PgEngineSpecTxContext(PgTxUOWContext, EngineTxSpecContext):
+class PgEngineSpecWriteContext(PgWriteUOWContext, EngineWriteSpecContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
-        self.specs = PgEngineSpecTxRepository(session)
+        self.specs = PgEngineSpecWriteRepository(session)
 
 
-class PgEngineSpecUnitOfWork(PgUnitOfWork[PgEngineSpecContext, PgEngineSpecTxContext]):
-    def _make_plain_ctx(self, *, session: AsyncSession) -> PgEngineSpecContext:
-        return PgEngineSpecContext(session=session)
+class PgEngineSpecUnitOfWork(PgUnitOfWork[PgEngineSpecReadContext, PgEngineSpecWriteContext]):
+    def _make_read_ctx(self, *, session: AsyncSession) -> PgEngineSpecReadContext:
+        return PgEngineSpecReadContext(session=session)
 
-    def _make_tx_ctx(self, *, session: AsyncSession, transaction: AsyncSessionTransaction) -> PgEngineSpecTxContext:
-        return PgEngineSpecTxContext(session=session, transaction=transaction)
+    def _make_write_ctx(
+        self, *, session: AsyncSession, transaction: AsyncSessionTransaction
+    ) -> PgEngineSpecWriteContext:
+        return PgEngineSpecWriteContext(session=session, transaction=transaction)

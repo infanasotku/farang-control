@@ -14,26 +14,26 @@ class Container(containers.DeclarativeContainer):
     settings = providers.Singleton(generate_settings)
     auth_settings = settings.provided.auth
 
-    plain_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=False)
-    tx_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=True)
+    read_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=False)
+    write_engine = providers.Singleton(create_engine, settings.provided.postgres, tx=True)
 
-    plain_sessionmaker = providers.Singleton(async_sessionmaker[AsyncSession], plain_engine)
-    tx_sessionmaker = providers.Singleton(async_sessionmaker[AsyncSession], tx_engine)
+    read_sessionmaker = providers.Singleton(async_sessionmaker[AsyncSession], read_engine)
+    write_sessionmaker = providers.Singleton(async_sessionmaker[AsyncSession], write_engine)
 
     engine_uow = providers.Factory(
         PgEngineUnitOfWork,
-        plain_sessionmaker=plain_sessionmaker,
-        tx_sessionmaker=tx_sessionmaker,
+        read_sessionmaker=read_sessionmaker,
+        write_sessionmaker=write_sessionmaker,
     )
     state_uow = providers.Factory(
         PgStateUnitOfWork,
-        plain_sessionmaker=plain_sessionmaker,
-        tx_sessionmaker=tx_sessionmaker,
+        read_sessionmaker=read_sessionmaker,
+        write_sessionmaker=write_sessionmaker,
     )
     spec_uow = providers.Factory(
         PgEngineSpecUnitOfWork,
-        plain_sessionmaker=plain_sessionmaker,
-        tx_sessionmaker=tx_sessionmaker,
+        read_sessionmaker=read_sessionmaker,
+        write_sessionmaker=write_sessionmaker,
     )
 
     engine_service = providers.Factory(EngineService, engine_uow)

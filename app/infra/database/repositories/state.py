@@ -33,7 +33,7 @@ class PgStateRepository(PostgresRepository):
         return engine_runtime_state_from_model(row) if row else None
 
 
-class PgStateTxRepository(PgStateRepository):
+class PgStateWriteRepository(PgStateRepository):
     async def upsert_engine_state(self, state: EngineRuntimeState) -> None:
         logger.debug(
             f"Upserting engine runtime state: engine_id={state.engine_id} instance_id={state.current_instance_id} epoch={state.current_epoch} seq_no={state.last_seq_no}"
@@ -93,7 +93,7 @@ class PgInstanceRepository(PostgresRepository):
         return engine_instance_from_model(row) if row else None
 
 
-class PgInstanceTxRepository(PgInstanceRepository):
+class PgInstanceWriteRepository(PgInstanceRepository):
     async def create(self, payload: EngineInstance):
         logger.debug(
             f"Creating engine instance history row: instance_id={payload.instance_id} engine_id={payload.engine_id} epoch={payload.epoch}"
