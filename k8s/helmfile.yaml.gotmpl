@@ -33,6 +33,8 @@ releases:
       - deploy/values/{{ .Environment.Name }}/common.values.yaml
       - deploy/values/{{ .Environment.Name }}/migration.values.yaml
     set:
+      - name: environment
+        value: {{ .Environment.Name }}
       - name: container.tag
         value: {{ printf "%v" (required "tag is required; pass --state-values-set tag=<value>" (index .Environment.Values "tag")) }}
     hooks:
@@ -64,6 +66,8 @@ releases:
       - deploy/values/{{ .Environment.Name }}/common.values.yaml
       - deploy/values/{{ .Environment.Name }}/api.values.yaml
     set:
+      - name: environment
+        value: {{ .Environment.Name }}
       - name: container.tag
         value: {{ printf "%v" (required "tag is required; pass --state-values-set tag=<value>" (index .Environment.Values "tag")) }}
     hooks:

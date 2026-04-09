@@ -25,9 +25,3 @@ runs:
           -l svc=${{ inputs.service }} \
           --skip-refresh \
           apply
-
-    - name: Uninstall test
-      shell: bash
-      if: inputs.environment == 'prod'
-      run: |
-        helm uninstall --ignore-not-found ${{ inputs.service }} --namespace farang-control-test
