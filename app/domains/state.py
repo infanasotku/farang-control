@@ -17,7 +17,10 @@ class LivenessStatus(StrEnum):
 
 class InstancePhase(StrEnum):
     STARTING = "starting"
-    # TODO new phases
+    RUNNING = "running"
+    FAILED = "failed"
+    IDLE = "idle"
+    ROLLED_BACK = "rolledback"
 
 
 class SyncStatus(StrEnum):
