@@ -32,7 +32,9 @@ def state_ctx(uow: MagicMock):
 class StateServiceDeps:
     @fixture(autouse=True)
     def _setup(self, uow: MagicMock):
-        self.svc = StateService(uow)
+        self.projection = MagicMock()
+        self.projection.sync_engine = AsyncMock()
+        self.svc = StateService(uow, projection=self.projection)
 
 
 class TestRegisterInstance(StateServiceDeps):
@@ -48,6 +50,7 @@ class TestRegisterInstance(StateServiceDeps):
 
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_current_instance_retry_returns_existing_epoch_without_writes(self, state_ctx: MagicMock):
@@ -75,6 +78,7 @@ class TestRegisterInstance(StateServiceDeps):
         assert epoch == 3
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_retired_instance_causes_instance_deprecated_error(self, state_ctx: MagicMock):
@@ -106,6 +110,7 @@ class TestRegisterInstance(StateServiceDeps):
 
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_alive_current_instance_causes_current_instance_alive_error(self, state_ctx: MagicMock):
@@ -131,6 +136,7 @@ class TestRegisterInstance(StateServiceDeps):
 
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_first_registration_creates_instance_and_runtime_state(self, state_ctx: MagicMock):
@@ -162,6 +168,7 @@ class TestRegisterInstance(StateServiceDeps):
         assert created_state.observed_generation == 0
         assert created_state.last_seq_no == 0
         assert created_state.last_seen_at == now
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_registration_after_dead_instance_creates_new_epoch(self, state_ctx: MagicMock):
@@ -197,6 +204,7 @@ class TestRegisterInstance(StateServiceDeps):
         created_state = state_ctx.states.upsert_engine_state.await_args.args[0]
         assert created_state.current_instance_id == instance_id
         assert created_state.current_epoch == 8
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_existing_instance_without_runtime_state_causes_runtime_error(self, state_ctx: MagicMock):
@@ -218,6 +226,7 @@ class TestRegisterInstance(StateServiceDeps):
 
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
 
 class TestApplyHeartbeat(StateServiceDeps):
@@ -237,6 +246,7 @@ class TestApplyHeartbeat(StateServiceDeps):
             await self.svc.apply_heartbeat(cmd)
 
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_unregistered_instance_causes_instance_not_registered_error(self, state_ctx: MagicMock):
@@ -253,6 +263,7 @@ class TestApplyHeartbeat(StateServiceDeps):
             await self.svc.apply_heartbeat(cmd)
 
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_old_instance_is_ignored_without_writes(self, state_ctx: MagicMock):
@@ -288,6 +299,7 @@ class TestApplyHeartbeat(StateServiceDeps):
 
         assert result is None
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_old_epoch_is_ignored_without_writes(self, state_ctx: MagicMock):
@@ -322,6 +334,7 @@ class TestApplyHeartbeat(StateServiceDeps):
 
         assert result is None
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_duplicate_or_old_seq_no_is_ignored_without_writes(self, state_ctx: MagicMock):
@@ -357,6 +370,7 @@ class TestApplyHeartbeat(StateServiceDeps):
 
         assert result is None
         state_ctx.states.upsert_engine_state.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_new_heartbeat_updates_runtime_state(self, state_ctx: MagicMock):
@@ -398,3 +412,4 @@ class TestApplyHeartbeat(StateServiceDeps):
         assert state.observed_generation == 5
         assert state.last_seq_no == 7
         assert state.last_seen_at == now
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)

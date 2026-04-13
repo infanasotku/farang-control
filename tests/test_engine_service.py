@@ -27,7 +27,9 @@ def engine_ctx(uow: MagicMock):
 class EngineServiceDeps:
     @fixture(autouse=True)
     def _setup(self, uow: MagicMock):
-        self.svc = EngineService(uow)
+        self.projection = MagicMock()
+        self.projection.sync_engine = AsyncMock()
+        self.svc = EngineService(uow, projection=self.projection)
 
 
 class TestUpdateEngine(EngineServiceDeps):
@@ -44,6 +46,7 @@ class TestUpdateEngine(EngineServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.engines.update.assert_awaited_once_with(engine)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_raises_when_engine_is_not_found(self, engine_ctx: MagicMock, uow: MagicMock):
@@ -55,6 +58,7 @@ class TestUpdateEngine(EngineServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.engines.update.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
 
 class TestCreateEngine(EngineServiceDeps):
@@ -72,6 +76,7 @@ class TestCreateEngine(EngineServiceDeps):
         created_spec = await_args.args[0]
         assert created_spec == EngineSpec.initial(result.id)
         upsert_spec_mock.assert_awaited_once_with(created_spec, ctx=engine_ctx)
+        self.projection.sync_engine.assert_awaited_once_with(result.id)
 
 
 class TestRemoveEngine(EngineServiceDeps):
@@ -86,6 +91,7 @@ class TestRemoveEngine(EngineServiceDeps):
         engine_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         engine_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         engine_ctx.engines.delete.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_removes_engine_and_spec_when_spec_exists(self, engine_ctx: MagicMock, uow: MagicMock):
@@ -104,6 +110,7 @@ class TestRemoveEngine(EngineServiceDeps):
         engine_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         engine_ctx.engines.delete.assert_awaited_once_with(engine_id)
         remove_spec_mock.assert_awaited_once_with(spec, ctx=engine_ctx)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_removes_engine_without_spec_side_effect_when_spec_is_missing(
@@ -123,3 +130,4 @@ class TestRemoveEngine(EngineServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         engine_ctx.engines.delete.assert_awaited_once_with(engine_id)
         remove_spec_mock.assert_not_awaited()
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
