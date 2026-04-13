@@ -6,14 +6,18 @@ from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.func import engine as engine_func
 from app.infra.database.uows import EngineReadContext, EngineWriteContext
 from app.infra.logging.logger import get_logger
+from app.services.projections.engine import EngineProjectionService
 from app.services.shared.spec import remove_engine_spec, upsert_engine_spec
 
 logger = get_logger().getChild(__name__)
 
 
 class EngineService:
-    def __init__(self, uow: UnitOfWork[EngineReadContext, EngineWriteContext]) -> None:
+    def __init__(
+        self, uow: UnitOfWork[EngineReadContext, EngineWriteContext], *, projection: EngineProjectionService
+    ) -> None:
         self._uow = uow
+        self._projection = projection
 
     async def update_engine(self, engine_id: UUID, name: str) -> Engine:
         logger.info(f"Updating engine: engine_id={engine_id}")
@@ -37,6 +41,11 @@ class EngineService:
             await upsert_engine_spec(creation_result.spec, ctx=ctx)
 
         logger.info(f"Engine created with initial spec: engine_id={creation_result.engine.id}")
+
+        try:
+            await self._projection.on_engine_created(creation_result.engine)
+        except Exception as e:
+            logger.error(f"Failed to project engine creation: engine_id={creation_result.engine.id}, error={e}")
         return creation_result.engine
 
     async def remove_engine(self, engine_id: UUID) -> None:

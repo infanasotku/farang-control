@@ -16,6 +16,7 @@ class LivenessStatus(StrEnum):
 
 
 class InstancePhase(StrEnum):
+    UNKNOWN = "unknown"
     STARTING = "starting"
     RUNNING = "running"
     FAILED = "failed"
