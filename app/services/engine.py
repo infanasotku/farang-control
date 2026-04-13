@@ -33,8 +33,8 @@ class EngineService:
 
         try:
             await self._projection.sync_engine(engine.id)
-        except Exception as e:
-            logger.error(f"Failed to project engine update: engine_id={engine.id}, error={e}")
+        except Exception:
+            logger.exception(f"Failed to project engine update: engine_id={engine.id}")
 
         return engine
 
@@ -50,8 +50,8 @@ class EngineService:
 
         try:
             await self._projection.sync_engine(creation_result.engine.id)
-        except Exception as e:
-            logger.error(f"Failed to project engine creation: engine_id={creation_result.engine.id}, error={e}")
+        except Exception:
+            logger.exception(f"Failed to project engine creation: engine_id={creation_result.engine.id}")
 
         return creation_result.engine
 
@@ -79,7 +79,7 @@ class EngineService:
 
         try:
             await self._projection.sync_engine(engine_id)
-        except Exception as e:
-            logger.error(f"Failed to project engine removal: engine_id={engine_id}, error={e}")
+        except Exception:
+            logger.exception(f"Failed to project engine removal: engine_id={engine_id}")
 
         logger.info(f"Engine removed: engine_id={engine_id}")

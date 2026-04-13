@@ -46,7 +46,7 @@ class SpecService:
 
         try:
             await self._projection.sync_engine(spec.engine_id)
-        except Exception as e:
-            logger.error(f"Failed to project engine spec update: engine_id={cmd.engine_id}, error={e}")
+        except Exception:
+            logger.exception(f"Failed to project engine spec update: engine_id={cmd.engine_id}")
 
         logger.info(f"Engine spec updated: engine_id={cmd.engine_id} generation={spec.generation}")
