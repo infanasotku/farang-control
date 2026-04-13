@@ -7,7 +7,6 @@ from sqladmin import ModelView
 
 from app.container import Container
 from app.dto.spec import UpdateSpecCmd
-from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
 from app.infra.logging.logger import get_logger
@@ -25,12 +24,7 @@ class EngineView(ModelView, model=EngineProjectionModel):
         "config": lambda *_: "<COLLAPSED>",
     }
 
-
-class EngineViewOld(ModelView, model=EngineModel):
-    can_export = False
-
-    column_list = [EngineModel.id, EngineModel.name]
-    form_columns = [EngineModel.name]
+    form_create_rules = ["name"]
 
     @inject
     async def update_model(
@@ -42,7 +36,7 @@ class EngineViewOld(ModelView, model=EngineModel):
     ) -> Any:
         logger.info(f"Admin updating engine: engine_id={pk}")
         await svc.update_engine(UUID(pk), data["name"])
-        return EngineModel(id=pk)
+        return EngineProjectionModel(engine_id=pk)
 
     @inject
     async def insert_model(
@@ -54,7 +48,7 @@ class EngineViewOld(ModelView, model=EngineModel):
         logger.info(f"Admin creating engine: name={data['name']}")
         engine = await svc.create_engine(data["name"])
         logger.info(f"Admin created engine: engine_id={engine.id}")
-        return EngineModel(id=engine.id)
+        return EngineProjectionModel(engine_id=engine.id)
 
     @inject
     async def delete_model(
