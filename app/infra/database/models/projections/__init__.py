@@ -4,8 +4,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.database.models.base import Base, uuidpk
 
 
-class EngineAggregate(Base):
-    __tablename__ = "engine_aggregates"
+class EngineProjection(Base):
+    __tablename__ = "engine_projections"
 
     engine_id: Mapped[uuidpk]
 

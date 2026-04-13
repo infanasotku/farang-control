@@ -7,9 +7,9 @@ from sqladmin import ModelView
 
 from app.container import Container
 from app.dto.spec import UpdateSpecCmd
-from app.infra.database.models.aggregates import EngineAggregate as EngineAggregateModel
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
+from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
 from app.services.spec import SpecService
@@ -17,7 +17,7 @@ from app.services.spec import SpecService
 logger = get_logger().getChild(__name__)
 
 
-class EngineView(ModelView, model=EngineAggregateModel):
+class EngineView(ModelView, model=EngineProjectionModel):
     can_export = False
     column_list = "__all__"
 
