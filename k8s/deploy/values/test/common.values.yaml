@@ -2,4 +2,6 @@ container:
   tag: test
 
 config:
+  ENV: test
+
   POSTGRES__DATABASE: control-test

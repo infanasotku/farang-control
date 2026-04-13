@@ -4,6 +4,8 @@ kind: ConfigMap
 metadata:
   name: {{ include "common.fullname" . }}
 data:
+  ENV: {{ .Values.config.ENV }}
+
   # Postgres
   POSTGRES__USERNAME: infanasotku
   POSTGRES__DATABASE: {{ .Values.config.POSTGRES__DATABASE }}
