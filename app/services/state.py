@@ -8,13 +8,17 @@ from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
 from app.infra.database.uows.state import StateReadContext, StateWriteContext
 from app.infra.logging.logger import get_logger
+from app.services.projections.engine import EngineProjectionService
 
 logger = get_logger().getChild(__name__)
 
 
 class StateService:
-    def __init__(self, uow: UnitOfWork[StateReadContext, StateWriteContext]) -> None:
+    def __init__(
+        self, uow: UnitOfWork[StateReadContext, StateWriteContext], *, projection: EngineProjectionService
+    ) -> None:
         self._uow = uow
+        self._projection = projection
 
     async def register_instance(self, *, instance_id: UUID, engine_id: UUID) -> int:
         """
@@ -60,10 +64,16 @@ class StateService:
                     f"Runtime state updated on registration: engine_id={engine_id} instance_id={instance_id} epoch={result.new_runtime_state.current_epoch}"
                 )
 
-            logger.info(
-                f"Register instance finished: engine_id={engine_id} instance_id={instance_id} epoch={result.epoch}"
-            )
-            return result.epoch
+        if result.new_runtime_state is not None:
+            try:
+                await self._projection.sync_engine(engine_id)
+            except Exception:
+                logger.exception(
+                    f"Failed to project engine state update on registration: engine_id={engine_id} instance_id={instance_id}"
+                )
+
+        logger.info(f"Register instance finished: engine_id={engine_id} instance_id={instance_id} epoch={result.epoch}")
+        return result.epoch
 
     async def apply_heartbeat(self, cmd: ApplyHeartbeatCmd):
         """
@@ -103,10 +113,18 @@ class StateService:
 
             if result.new_state is not None:
                 await ctx.states.upsert_engine_state(result.new_state)
-                logger.info(
-                    f"Heartbeat updated runtime state: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
+
+        if result.new_state is not None:
+            logger.info(
+                f"Heartbeat updated runtime state: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
+            )
+            try:
+                await self._projection.sync_engine(cmd.engine_id)
+            except Exception:
+                logger.exception(
+                    f"Failed to project engine state update on heartbeat: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
                 )
-            else:
-                logger.info(
-                    f"Heartbeat produced no state changes: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
-                )
+        else:
+            logger.info(
+                f"Heartbeat produced no state changes: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
+            )

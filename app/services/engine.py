@@ -29,13 +29,13 @@ class EngineService:
 
             engine.name = name
             await ctx.engines.update(engine)
-        logger.info(f"Engine updated: engine_id={engine_id}")
 
         try:
             await self._projection.sync_engine(engine.id)
         except Exception:
             logger.exception(f"Failed to project engine update: engine_id={engine.id}")
 
+        logger.info(f"Engine updated: engine_id={engine_id}")
         return engine
 
     async def create_engine(self, name: str) -> Engine:
@@ -46,13 +46,12 @@ class EngineService:
             await ctx.engines.add(creation_result.engine)
             await upsert_engine_spec(creation_result.spec, ctx=ctx)
 
-        logger.info(f"Engine created with initial spec: engine_id={creation_result.engine.id}")
-
         try:
             await self._projection.sync_engine(creation_result.engine.id)
         except Exception:
             logger.exception(f"Failed to project engine creation: engine_id={creation_result.engine.id}")
 
+        logger.info(f"Engine created with initial spec: engine_id={creation_result.engine.id}")
         return creation_result.engine
 
     async def remove_engine(self, engine_id: UUID) -> None:

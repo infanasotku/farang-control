@@ -45,5 +45,5 @@ class Container(containers.DeclarativeContainer):
 
     projection_service = providers.Factory(EngineProjectionService, projection_uow)
     engine_service = providers.Factory(EngineService, engine_uow, projection=projection_service)
-    state_service = providers.Factory(StateService, state_uow)
+    state_service = providers.Factory(StateService, state_uow, projection=projection_service)
     spec_service = providers.Factory(SpecService, spec_uow, projection=projection_service)
