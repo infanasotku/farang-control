@@ -7,7 +7,6 @@ from sqladmin import ModelView
 
 from app.container import Container
 from app.dto.spec import UpdateSpecCmd
-from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
@@ -24,7 +23,7 @@ class EngineView(ModelView, model=EngineProjectionModel):
         "config": lambda *_: "<COLLAPSED>",
     }
 
-    form_create_rules = ["name"]
+    form_excluded_columns = [EngineProjectionModel.phase]
 
     @inject
     async def update_model(
@@ -32,10 +31,13 @@ class EngineView(ModelView, model=EngineProjectionModel):
         request: Request,
         pk: str,
         data: dict,
-        svc: EngineService = Provide[Container.engine_service],
+        engine_svc: EngineService = Provide[Container.engine_service],
+        spec_svc: SpecService = Provide[Container.spec_service],
     ) -> Any:
         logger.info(f"Admin updating engine: engine_id={pk}")
-        await svc.update_engine(UUID(pk), data["name"])
+        await engine_svc.update_engine(UUID(pk), data["name"])
+        logger.info(f"Admin updating engine spec: engine_id={pk}")
+        await spec_svc.update_spec(UpdateSpecCmd(engine_id=UUID(pk), config=data["config"], enabled=data["enabled"]))
         return EngineProjectionModel(engine_id=pk)
 
     @inject
@@ -43,11 +45,13 @@ class EngineView(ModelView, model=EngineProjectionModel):
         self,
         request: Request,
         data: dict,
-        svc: EngineService = Provide[Container.engine_service],
+        engine_svc: EngineService = Provide[Container.engine_service],
+        spec_svc: SpecService = Provide[Container.spec_service],
     ) -> Any:
         logger.info(f"Admin creating engine: name={data['name']}")
-        engine = await svc.create_engine(data["name"])
-        logger.info(f"Admin created engine: engine_id={engine.id}")
+        engine = await engine_svc.create_engine(data["name"])
+        logger.info(f"Admin creating engine spec: engine_id={engine.id}")
+        await spec_svc.update_spec(UpdateSpecCmd(engine_id=engine.id, config=data["config"], enabled=data["enabled"]))
         return EngineProjectionModel(engine_id=engine.id)
 
     @inject
@@ -59,47 +63,3 @@ class EngineView(ModelView, model=EngineProjectionModel):
     ) -> None:
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
-
-
-class EngineSpecView(ModelView, model=EngineSpecModel):
-    can_export = False
-    can_create = False
-    can_delete = False
-    can_edit = True
-
-    column_list = "__all__"
-    form_columns = [
-        EngineSpecModel.config,
-        EngineSpecModel.enabled,
-    ]
-
-    column_formatters = {
-        "config": lambda *_: "<COLLAPSED>",
-    }
-
-    @inject
-    async def update_model(
-        self,
-        request: Request,
-        pk: str,
-        data: dict,
-        svc: SpecService = Provide[Container.spec_service],
-    ) -> Any:
-        # Workaround is caused by the fact that sqladmin uses direct
-        # SQLAlchemy Core queries to fetch the object,
-        # which bypasses the service layer and thus the domain logic.
-        async with self.session_maker() as session:
-            stmt = self._stmt_by_identifier(pk)
-            spec: EngineSpecModel | None = await session.scalar(stmt)
-            if not spec:
-                raise ValueError("Engine spec not found")
-
-        logger.info(f"Admin updating engine spec: engine_id={spec.engine_id}")
-        await svc.update_spec(
-            UpdateSpecCmd(
-                engine_id=spec.engine_id,
-                config=data.get("config"),
-                enabled=data.get("enabled"),
-            )
-        )
-        return EngineSpecModel(id=int(pk))
