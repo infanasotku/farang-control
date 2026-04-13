@@ -207,6 +207,28 @@ class TestRegisterInstance(StateServiceDeps):
         self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
+    async def test_registration_succeeds_when_projection_sync_fails(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        self.projection.sync_engine.side_effect = RuntimeError("projection failed")
+
+        with (
+            patch("app.services.state.now_utc", return_value=now),
+            patch("app.services.state.logger.exception") as logger_exception,
+        ):
+            epoch = await self.svc.register_instance(
+                instance_id=instance_id,
+                engine_id=engine_id,
+            )
+
+        assert epoch == 1
+        state_ctx.instances.create.assert_awaited_once()
+        state_ctx.states.upsert_engine_state.assert_awaited_once()
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
+        logger_exception.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_existing_instance_without_runtime_state_causes_runtime_error(self, state_ctx: MagicMock):
         engine_id = uuid4()
         instance_id = uuid4()
@@ -413,3 +435,46 @@ class TestApplyHeartbeat(StateServiceDeps):
         assert state.last_seq_no == 7
         assert state.last_seen_at == now
         self.projection.sync_engine.assert_awaited_once_with(engine_id)
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_succeeds_when_projection_sync_fails(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        instance_id = uuid4()
+        previous_seen_at = datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 3, 15, 0, 1, tzinfo=timezone.utc)
+        self.projection.sync_engine.side_effect = RuntimeError("projection failed")
+        cmd = ApplyHeartbeatCmd(
+            engine_id=engine_id,
+            instance_id=instance_id,
+            epoch=2,
+            seq_no=7,
+            phase=InstancePhase.STARTING,
+            generation=5,
+        )
+        state = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.STARTING,
+            observed_generation=1,
+            last_seen_at=previous_seen_at,
+            last_seq_no=6,
+            current_instance_id=instance_id,
+            current_epoch=2,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = state
+        state_ctx.instances.get_instance_by_id.return_value = EngineInstance(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            epoch=2,
+            created_at=previous_seen_at,
+        )
+
+        with (
+            patch("app.services.state.now_utc", return_value=now),
+            patch("app.services.state.logger.exception") as logger_exception,
+        ):
+            result = await self.svc.apply_heartbeat(cmd)
+
+        assert result is None
+        state_ctx.states.upsert_engine_state.assert_awaited_once_with(state)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
+        logger_exception.assert_called_once()
