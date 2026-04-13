@@ -14,6 +14,7 @@ class EngineProjectionService:
         self._uow = uow
 
     async def sync_engine(self, engine_id: UUID):
+        logger.info(f"Syncing projection for engine: engine_id={engine_id}")
         async with self._uow.begin(write=True) as ctx:
             engine = await ctx.engines.get_engine_by_id(engine_id)
             if engine is None:
