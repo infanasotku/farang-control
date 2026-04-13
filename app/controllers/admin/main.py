@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.container import Container
 from app.controllers.admin.auth import AdminAuthenticationBackend
-from app.controllers.admin.views import EngineSpecView, EngineView
+from app.controllers.admin.views import EngineSpecView, EngineView, EngineViewOld
 from app.infra.logging.logger import get_logger
 
 logger = get_logger().getChild(__name__)
@@ -30,5 +30,6 @@ def register_admin(
         base_url="/admin",
     )
     admin.add_model_view(EngineView)
+    admin.add_model_view(EngineViewOld)
     admin.add_model_view(EngineSpecView)
     logger.info("Admin panel registered with model views")

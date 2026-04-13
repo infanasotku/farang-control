@@ -7,6 +7,7 @@ from sqladmin import ModelView
 
 from app.container import Container
 from app.dto.spec import UpdateSpecCmd
+from app.infra.database.models.aggregates import EngineAggregate as EngineAggregateModel
 from app.infra.database.models.engine import Engine as EngineModel
 from app.infra.database.models.engine import EngineSpec as EngineSpecModel
 from app.infra.logging.logger import get_logger
@@ -16,7 +17,16 @@ from app.services.spec import SpecService
 logger = get_logger().getChild(__name__)
 
 
-class EngineView(ModelView, model=EngineModel):
+class EngineView(ModelView, model=EngineAggregateModel):
+    can_export = False
+    column_list = "__all__"
+
+    column_formatters = {
+        "config": lambda *_: "<COLLAPSED>",
+    }
+
+
+class EngineViewOld(ModelView, model=EngineModel):
     can_export = False
 
     column_list = [EngineModel.id, EngineModel.name]
