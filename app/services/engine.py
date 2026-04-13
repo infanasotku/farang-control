@@ -32,7 +32,7 @@ class EngineService:
         logger.info(f"Engine updated: engine_id={engine_id}")
 
         try:
-            await self._projection.on_engine_updated(engine)
+            await self._projection.sync_engine(engine.id)
         except Exception as e:
             logger.error(f"Failed to project engine update: engine_id={engine.id}, error={e}")
 
@@ -49,7 +49,7 @@ class EngineService:
         logger.info(f"Engine created with initial spec: engine_id={creation_result.engine.id}")
 
         try:
-            await self._projection.on_engine_created(creation_result.engine)
+            await self._projection.sync_engine(creation_result.engine.id)
         except Exception as e:
             logger.error(f"Failed to project engine creation: engine_id={creation_result.engine.id}, error={e}")
 
@@ -78,7 +78,7 @@ class EngineService:
                 logger.info(f"Engine has no spec to remove: engine_id={engine_id}")
 
         try:
-            await self._projection.on_engine_removed(engine_id)
+            await self._projection.sync_engine(engine_id)
         except Exception as e:
             logger.error(f"Failed to project engine removal: engine_id={engine_id}, error={e}")
 
