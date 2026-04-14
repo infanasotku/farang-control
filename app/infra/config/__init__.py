@@ -10,7 +10,7 @@ from app.infra.config.postgres import PostgreSQLSettings
 
 
 class CommonSettings(BaseSettings):
-    env: Literal["local", "ci", "test", "production"]
+    env: Literal["local", "ci", "test", "prod"]
 
     model_config = SettingsConfigDict(env_nested_delimiter="__")
 
