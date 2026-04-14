@@ -1,9 +1,13 @@
+import json
 from typing import Any
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import Request
+from markupsafe import Markup, escape
 from sqladmin import ModelView
+from sqladmin.fields import JSONField
+from wtforms.widgets import TextArea
 
 from app.container import Container
 from app.dto.spec import UpdateSpecCmd
@@ -15,15 +19,48 @@ from app.services.spec import SpecService
 logger = get_logger().getChild(__name__)
 
 
+class LargeTextAreaWidget(TextArea):
+    def __call__(self, field, **kwargs):
+        kwargs.setdefault("rows", 24)
+        kwargs.setdefault("style", "font-family: monospace;")
+        return super().__call__(field, **kwargs)
+
+
+class ConfigJSONField(JSONField):
+    widget = LargeTextAreaWidget()
+
+    def _value(self) -> str:
+        data = {}
+
+        if self.raw_data:
+            data = json.loads(self.raw_data[0])
+
+        if self.data:
+            data = self.data
+
+        return json.dumps(data, ensure_ascii=False, indent=2)
+
+
 class EngineView(ModelView, model=EngineProjectionModel):
+    name = "Engine"
+    name_plural = "Engines"
+
     can_export = False
     column_list = "__all__"
+
+    form_excluded_columns = [EngineProjectionModel.phase]
+    form_overrides = {
+        "config": ConfigJSONField,
+    }
+
+    @staticmethod
+    def format_config(m, _) -> str:
+        return Markup(f'<div style="white-space: pre-wrap;">{escape(json.dumps(m.config, indent=2))}</div>')
 
     column_formatters = {
         "config": lambda *_: "<COLLAPSED>",
     }
-
-    form_excluded_columns = [EngineProjectionModel.phase]
+    column_formatters_detail = {EngineProjectionModel.config: format_config}
 
     @inject
     async def update_model(
