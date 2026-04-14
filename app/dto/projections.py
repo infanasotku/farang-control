@@ -1,8 +1,9 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.domains.state import InstancePhase
+from app.domains.state import InstancePhase, SyncStatus
 
 
 class UpsertProjection(BaseModel):
@@ -11,4 +12,6 @@ class UpsertProjection(BaseModel):
     name: str
     config: dict
     enabled: bool
-    phase: InstancePhase
+    phase: InstancePhase | None
+    last_seen_at: datetime | None
+    sync: SyncStatus | None

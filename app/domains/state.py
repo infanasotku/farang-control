@@ -16,7 +16,6 @@ class LivenessStatus(StrEnum):
 
 
 class InstancePhase(StrEnum):
-    UNKNOWN = "unknown"
     STARTING = "starting"
     RUNNING = "running"
     FAILED = "failed"
@@ -27,6 +26,17 @@ class InstancePhase(StrEnum):
 class SyncStatus(StrEnum):
     IN_SYNC = "in_sync"
     OUTDATED = "outdated"
+
+
+def derive_liveness(*, now: datetime, last_seen_at: datetime) -> LivenessStatus:
+    if now - last_seen_at > DEAD_THRESHOLD:
+        liveness = LivenessStatus.DEAD
+    elif now - last_seen_at > STALE_THRESHOLD:
+        liveness = LivenessStatus.STALE
+    else:
+        liveness = LivenessStatus.ALIVE
+
+    return liveness
 
 
 @dataclass
@@ -42,14 +52,7 @@ class EngineRuntimeState:
     current_epoch: int
 
     def get_liveness(self, now: datetime) -> LivenessStatus:
-        if now - self.last_seen_at > DEAD_THRESHOLD:
-            liveness = LivenessStatus.DEAD
-        elif now - self.last_seen_at > STALE_THRESHOLD:
-            liveness = LivenessStatus.STALE
-        else:
-            liveness = LivenessStatus.ALIVE
-
-        return liveness
+        return derive_liveness(now=now, last_seen_at=self.last_seen_at)
 
     def is_new_state(self, seq_no: int) -> bool:
         return seq_no > self.last_seq_no

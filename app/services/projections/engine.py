@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
-from app.domains.state import InstancePhase
+from app.domains.state import DerivedEngineStatus
 from app.dto.projections import UpsertProjection
+from app.infra.common.time import now_utc
 from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
 from app.infra.logging.logger import get_logger
 
@@ -35,7 +36,9 @@ class EngineProjectionService:
                 name=engine.name,
                 config=spec.config if spec else {},
                 enabled=spec.enabled if spec else False,
-                phase=state.reported_phase if state else InstancePhase.UNKNOWN,
+                phase=state.reported_phase if state else None,
+                last_seen_at=state.last_seen_at if state else None,
+                sync=DerivedEngineStatus.derive(now_utc(), spec=spec, runtime=state).sync if state and spec else None,
             )
 
             await ctx.projections.upsert(upsert)
