@@ -1,5 +1,11 @@
+import os
+
 from mock import MagicMock
 from pytest import fixture
+
+
+def pytest_configure():
+    os.environ["ENV"] = "ci"
 
 
 @fixture()

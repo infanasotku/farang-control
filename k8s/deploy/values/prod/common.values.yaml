@@ -2,4 +2,6 @@ container:
   tag: latest
 
 config:
+  ENV: prod
+
   POSTGRES__DATABASE: control

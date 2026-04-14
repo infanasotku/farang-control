@@ -9,14 +9,18 @@ from app.infra.database.uows import (
     EngineWriteSpecContext,
 )
 from app.infra.logging.logger import get_logger
+from app.services.projections.engine import EngineProjectionService
 from app.services.shared.spec import upsert_engine_spec
 
 logger = get_logger().getChild(__name__)
 
 
 class SpecService:
-    def __init__(self, uow: UnitOfWork[EngineSpecReadContext, EngineWriteSpecContext]) -> None:
+    def __init__(
+        self, uow: UnitOfWork[EngineSpecReadContext, EngineWriteSpecContext], *, projection: EngineProjectionService
+    ) -> None:
         self._uow = uow
+        self._projection = projection
 
     async def get_spec_by_engine(self, engine_id: UUID) -> EngineSpec | None:
         logger.info(f"Getting engine spec: engine_id={engine_id}")
@@ -39,5 +43,10 @@ class SpecService:
                 f"Engine spec update prepared: engine_id={cmd.engine_id} changed={spec.generation != previous_generation} previous_generation={previous_generation} next_generation={spec.generation}"
             )
             await upsert_engine_spec(spec, ctx=ctx)
+
+        try:
+            await self._projection.sync_engine(spec.engine_id)
+        except Exception:
+            logger.exception(f"Failed to project engine spec update: engine_id={cmd.engine_id}")
 
         logger.info(f"Engine spec updated: engine_id={cmd.engine_id} generation={spec.generation}")

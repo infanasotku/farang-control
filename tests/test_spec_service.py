@@ -24,7 +24,9 @@ def spec_ctx(uow: MagicMock):
 class SpecServiceDeps:
     @fixture(autouse=True)
     def _setup(self, uow: MagicMock):
-        self.svc = SpecService(uow)
+        self.projection = MagicMock()
+        self.projection.sync_engine = AsyncMock()
+        self.svc = SpecService(uow, projection=self.projection)
 
 
 class TestGetSpecByEngine(SpecServiceDeps):
@@ -44,6 +46,7 @@ class TestGetSpecByEngine(SpecServiceDeps):
         assert result == spec
         uow.begin.assert_called_once_with(write=False)
         spec_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
+        self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_returns_none_when_spec_is_not_found(self, spec_ctx: MagicMock, uow: MagicMock):
@@ -54,6 +57,7 @@ class TestGetSpecByEngine(SpecServiceDeps):
         assert result is None
         uow.begin.assert_called_once_with(write=False)
         spec_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
+        self.projection.sync_engine.assert_not_awaited()
 
 
 class TestUpdateSpec(SpecServiceDeps):
@@ -83,6 +87,7 @@ class TestUpdateSpec(SpecServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_awaited_once_with(spec, ctx=spec_ctx)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_persists_spec_without_generation_bump_when_nothing_changed(
@@ -114,6 +119,7 @@ class TestUpdateSpec(SpecServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_awaited_once_with(spec, ctx=spec_ctx)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
 
     @pytest.mark.asyncio
     async def test_raises_when_spec_is_not_found(self, spec_ctx: MagicMock, uow: MagicMock):
@@ -131,3 +137,37 @@ class TestUpdateSpec(SpecServiceDeps):
         uow.begin.assert_called_once_with(write=True)
         spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
         upsert_spec_mock.assert_not_awaited()
+        self.projection.sync_engine.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_succeeds_when_projection_sync_fails(self, spec_ctx: MagicMock, uow: MagicMock):
+        engine_id = uuid4()
+        spec = EngineSpec(
+            engine_id=engine_id,
+            config={"foo": "bar"},
+            enabled=True,
+            generation=7,
+        )
+        spec_ctx.specs.get_engine_spec_for_update.return_value = spec
+        self.projection.sync_engine.side_effect = RuntimeError("projection failed")
+        cmd = UpdateSpecCmd(
+            engine_id=engine_id,
+            config={"foo": "baz"},
+            enabled=False,
+        )
+
+        with (
+            patch("app.services.spec.upsert_engine_spec", new=AsyncMock()) as upsert_spec_mock,
+            patch("app.services.spec.logger.exception") as logger_exception,
+        ):
+            result = await self.svc.update_spec(cmd)
+
+        assert result is None
+        assert spec.config == {"foo": "baz"}
+        assert spec.enabled is False
+        assert spec.generation == 8
+        uow.begin.assert_called_once_with(write=True)
+        spec_ctx.specs.get_engine_spec_for_update.assert_awaited_once_with(engine_id)
+        upsert_spec_mock.assert_awaited_once_with(spec, ctx=spec_ctx)
+        self.projection.sync_engine.assert_awaited_once_with(engine_id)
+        logger_exception.assert_called_once()
