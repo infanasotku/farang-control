@@ -6,7 +6,7 @@ from mock import AsyncMock, MagicMock
 from pytest import fixture
 
 from app.domains.engine import Engine, EngineSpec
-from app.domains.state import EngineRuntimeState, InstancePhase
+from app.domains.state import EngineRuntimeState, InstancePhase, SyncStatus
 from app.services.projections.engine import EngineProjectionService
 
 
@@ -73,6 +73,8 @@ class TestSyncEngine(ProjectionServiceDeps):
         assert upsert.config == {"mode": "proxy"}
         assert upsert.enabled is True
         assert upsert.phase == InstancePhase.RUNNING
+        assert upsert.last_seen_at == now
+        assert upsert.sync == SyncStatus.IN_SYNC
 
     @pytest.mark.asyncio
     async def test_uses_defaults_when_spec_and_state_are_missing(self, projection_ctx: MagicMock, uow: MagicMock):
@@ -93,7 +95,9 @@ class TestSyncEngine(ProjectionServiceDeps):
         assert upsert.name == "test-engine"
         assert upsert.config == {}
         assert upsert.enabled is False
-        assert upsert.phase == InstancePhase.UNKNOWN
+        assert upsert.phase is None
+        assert upsert.last_seen_at is None
+        assert upsert.sync is None
 
     @pytest.mark.asyncio
     async def test_deletes_projection_when_engine_is_missing(self, projection_ctx: MagicMock, uow: MagicMock):
