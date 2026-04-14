@@ -9,6 +9,10 @@ spec:
 
   template:
     spec:
+      metadata:
+        annotations:
+          rollme: {{ randAlphaNum 5 | quote }}
+
       restartPolicy: OnFailure
       securityContext:
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
