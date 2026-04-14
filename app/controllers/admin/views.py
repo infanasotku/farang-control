@@ -7,10 +7,13 @@ from fastapi import Request
 from markupsafe import Markup, escape
 from sqladmin import ModelView
 from sqladmin.fields import JSONField
+from sqladmin.pagination import Pagination
 from wtforms.widgets import TextArea
 
 from app.container import Container
+from app.domains.state import derive_liveness
 from app.dto.spec import UpdateSpecCmd
+from app.infra.common.time import now_utc
 from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
@@ -46,9 +49,23 @@ class EngineView(ModelView, model=EngineProjectionModel):
     name_plural = "Engines"
 
     can_export = False
-    column_list = "__all__"
 
-    form_excluded_columns = [EngineProjectionModel.phase]
+    column_list = [
+        EngineProjectionModel.engine_id,
+        EngineProjectionModel.name,
+        EngineProjectionModel.enabled,
+        EngineProjectionModel.phase,
+        EngineProjectionModel.sync,
+        EngineProjectionModel.config,
+        "liveness",
+    ]
+    column_details_list = column_list.copy()
+
+    form_excluded_columns = [
+        EngineProjectionModel.phase,
+        EngineProjectionModel.sync,
+        EngineProjectionModel.last_seen_at,
+    ]
     form_overrides = {
         "config": ConfigJSONField,
     }
@@ -100,3 +117,14 @@ class EngineView(ModelView, model=EngineProjectionModel):
     ) -> None:
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
+
+    async def list(self, request: Request) -> Pagination:
+        pagination = await super().list(request)
+        now = now_utc()
+        for row in pagination.rows:
+            if row.last_seen_at is None:
+                row.liveness = ""
+            else:
+                row.liveness = derive_liveness(now=now, last_seen_at=row.last_seen_at)
+
+        return pagination
