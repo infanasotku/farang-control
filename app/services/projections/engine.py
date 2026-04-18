@@ -16,29 +16,37 @@ class EngineProjectionService:
 
     async def sync_engine(self, engine_id: UUID):
         logger.info(f"Syncing projection for engine: engine_id={engine_id}")
-        async with self._uow.begin(write=True) as ctx:
+
+        upsert = None
+        async with self._uow.begin(write=False) as ctx:
             engine = await ctx.engines.get_engine_by_id(engine_id)
             if engine is None:
                 logger.info(f"Projection sync found no engine, deleting projection: engine_id={engine_id}")
+            else:
+                spec = await ctx.specs.get_engine_spec(engine_id)
+                if spec is None:
+                    logger.info(f"Projection sync found no spec for engine, using defaults: engine_id={engine_id}")
+
+                state = await ctx.states.get_engine_state(engine_id)
+                if state is None:
+                    logger.info(f"Projection sync found no state for engine, using defaults: engine_id={engine_id}")
+
+                upsert = UpsertProjection(
+                    engine_id=engine.id,
+                    name=engine.name,
+                    config=spec.config if spec else {},
+                    enabled=spec.enabled if spec else False,
+                    phase=state.reported_phase if state else None,
+                    last_seen_at=state.last_seen_at if state else None,
+                    sync=DerivedEngineStatus.derive(now_utc(), spec=spec, runtime=state).sync
+                    if state and spec
+                    else None,
+                )
+
+        async with self._uow.begin(write=True) as ctx:
+            if engine is None:
                 await ctx.projections.delete(engine_id)
                 return
 
-            spec = await ctx.specs.get_engine_spec(engine_id)
-            if spec is None:
-                logger.info(f"Projection sync found no spec for engine, using defaults: engine_id={engine_id}")
-
-            state = await ctx.states.get_engine_state(engine_id)
-            if state is None:
-                logger.info(f"Projection sync found no state for engine, using defaults: engine_id={engine_id}")
-
-            upsert = UpsertProjection(
-                engine_id=engine.id,
-                name=engine.name,
-                config=spec.config if spec else {},
-                enabled=spec.enabled if spec else False,
-                phase=state.reported_phase if state else None,
-                last_seen_at=state.last_seen_at if state else None,
-                sync=DerivedEngineStatus.derive(now_utc(), spec=spec, runtime=state).sync if state and spec else None,
-            )
-
-            await ctx.projections.upsert(upsert)
+            if upsert is not None:
+                await ctx.projections.upsert(upsert)

@@ -9,5 +9,6 @@ def create_engine(settings: PostgreSQLSettings, *, tx: bool = False):
         connect_args=dict(server_settings=dict(search_path=settings.schema_)),
         pool_pre_ping=False,
         pool_recycle=3600,
+        pool_size=20,
         isolation_level="AUTOCOMMIT" if not tx else None,
     )
