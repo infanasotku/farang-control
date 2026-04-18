@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from mock import AsyncMock, MagicMock
+from mock import AsyncMock, MagicMock, call
 from pytest import fixture
 
 from app.domains.engine import Engine, EngineSpec
@@ -60,7 +60,7 @@ class TestSyncEngine(ProjectionServiceDeps):
 
         await self.svc.sync_engine(engine_id)
 
-        uow.begin.assert_called_once_with(write=True)
+        assert uow.begin.call_args_list == [call(write=False), call(write=True)]
         projection_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         projection_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         projection_ctx.states.get_engine_state.assert_awaited_once_with(engine_id)
@@ -83,7 +83,7 @@ class TestSyncEngine(ProjectionServiceDeps):
 
         await self.svc.sync_engine(engine_id)
 
-        uow.begin.assert_called_once_with(write=True)
+        assert uow.begin.call_args_list == [call(write=False), call(write=True)]
         projection_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         projection_ctx.specs.get_engine_spec.assert_awaited_once_with(engine_id)
         projection_ctx.states.get_engine_state.assert_awaited_once_with(engine_id)
@@ -105,7 +105,7 @@ class TestSyncEngine(ProjectionServiceDeps):
 
         await self.svc.sync_engine(engine_id)
 
-        uow.begin.assert_called_once_with(write=True)
+        assert uow.begin.call_args_list == [call(write=False), call(write=True)]
         projection_ctx.engines.get_engine_by_id.assert_awaited_once_with(engine_id)
         projection_ctx.specs.get_engine_spec.assert_not_awaited()
         projection_ctx.states.get_engine_state.assert_not_awaited()

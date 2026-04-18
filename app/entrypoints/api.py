@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.container import Container
@@ -23,8 +25,20 @@ def create_app() -> FastAPI:
         ],
     )
     settings = container.settings()
+    read_engine = container.read_engine()
+    write_engine = container.write_engine()
 
-    app = FastAPI()
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        try:
+            yield
+        finally:
+            logger.info("Disposing database engines")
+            await read_engine.dispose()
+            await write_engine.dispose()
+
+    app = FastAPI(lifespan=lifespan)
+    app.state.container = container
 
     app.include_router(v1, prefix="/api/v1")
     app.add_middleware(middlewares.CorrelationIdASGIMiddleware)
