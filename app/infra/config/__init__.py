@@ -2,6 +2,7 @@ import os
 from typing import Literal
 
 from dotenv import load_dotenv
+from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.infra.config.admin import AdminSettings
@@ -25,10 +26,7 @@ class Settings(BaseSettings):
 
 class TestSettings(Settings):
     postgres: PostgreSQLSettings = PostgreSQLSettings(
-        username="test",
-        host="localhost",
-        database="test_db",
-        password="test",
+        dsn=PostgresDsn("postgresql+asyncpg://test_user:test_password@localhost:5432/test_db")
     )
     auth: AuthSettings = AuthSettings(edge_api_key="test_key")
     admin: AdminSettings = AdminSettings(username="admin", password="admin", secret="admin_secret")
