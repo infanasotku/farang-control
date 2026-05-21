@@ -30,12 +30,14 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await container.init_resources()  # type: ignore
         try:
             yield
         finally:
             logger.info("Disposing database engines")
             await read_engine.dispose()
             await write_engine.dispose()
+            await container.shutdown_resources()  # type: ignore
 
     app = FastAPI(lifespan=lifespan)
     app.state.container = container

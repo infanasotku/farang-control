@@ -2,12 +2,13 @@ import os
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import PostgresDsn
+from pydantic import PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.infra.config.admin import AdminSettings
 from app.infra.config.auth import AuthSettings
 from app.infra.config.postgres import PostgreSQLSettings
+from app.infra.config.redis import RedisSettings
 
 
 class CommonSettings(BaseSettings):
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
     postgres: PostgreSQLSettings
     auth: AuthSettings
     admin: AdminSettings
+    redis: RedisSettings
 
     model_config = SettingsConfigDict(env_nested_delimiter="__")
 
@@ -30,6 +32,7 @@ class TestSettings(Settings):
     )
     auth: AuthSettings = AuthSettings(edge_api_key="test_key")
     admin: AdminSettings = AdminSettings(username="admin", password="admin", secret="admin_secret")
+    redis: RedisSettings = RedisSettings(dsn=RedisDsn("redis://localhost:6379/0"))
 
 
 def generate_settings():
