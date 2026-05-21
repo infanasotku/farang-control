@@ -2,6 +2,7 @@ from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infra.cache import create_redis_context
+from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.config import generate_settings
 from app.infra.database import create_engine
 from app.infra.database.uows import PgEngineSpecUnitOfWork, PgEngineUnitOfWork
@@ -22,6 +23,8 @@ class Container(containers.DeclarativeContainer):
         create_redis_context,
         settings.provided.redis,
     )
+
+    projection_repo = providers.Factory(RedisEngineProjectionRepository, redis)
     #
 
     # Postgres
@@ -52,7 +55,7 @@ class Container(containers.DeclarativeContainer):
     )
     #
 
-    projection_service = providers.Factory(EngineProjectionService, projection_uow)
+    projection_service = providers.Factory(EngineProjectionService, projection_repo)
     engine_service = providers.Factory(EngineService, engine_uow, projection=projection_service)
     state_service = providers.Factory(StateService, state_uow, projection=projection_service)
     spec_service = providers.Factory(SpecService, spec_uow, projection=projection_service)

@@ -3,6 +3,7 @@ from uuid import UUID
 from app.contracts.uow import UnitOfWork
 from app.domains.state import DerivedEngineStatus
 from app.dto.projections import UpsertProjection
+from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.common.time import now_utc
 from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
 from app.infra.logging.logger import get_logger
@@ -11,8 +12,11 @@ logger = get_logger().getChild(__name__)
 
 
 class EngineProjectionService:
-    def __init__(self, uow: UnitOfWork[ProjectionReadContext, ProjectionWriteContext]) -> None:
+    def __init__(
+        self, uow: UnitOfWork[ProjectionReadContext, ProjectionWriteContext], *, repo: RedisEngineProjectionRepository
+    ) -> None:
         self._uow = uow
+        self._repo = repo
 
     async def sync_engine(self, engine_id: UUID):
         logger.info(f"Syncing projection for engine: engine_id={engine_id}")
@@ -43,10 +47,9 @@ class EngineProjectionService:
                     else None,
                 )
 
-        async with self._uow.begin(write=True) as ctx:
-            if engine is None:
-                await ctx.projections.delete(engine_id)
-                return
+        if engine is None:
+            await self._repo.delete(engine_id)
+            return
 
-            if upsert is not None:
-                await ctx.projections.upsert(upsert)
+        if upsert is not None:
+            await self._repo.upsert(upsert)
