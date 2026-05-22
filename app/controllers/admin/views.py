@@ -130,18 +130,7 @@ class EngineView(ModelView, model=EngineProjectionModel):
         projections = await svc.get(offset=(page - 1) * page_size, limit=page_size)
         count = len(projections)
 
-        rows = [
-            EngineProjectionModel(
-                engine_id=p.engine_id,
-                name=p.name,
-                config=p.config,
-                enabled=p.enabled,
-                phase=p.phase,
-                sync=p.sync,
-                liveness=p.liveness,
-            )
-            for p in projections
-        ]
+        rows = [EngineProjectionModel.from_projection(p) for p in projections]
 
         pagination = Pagination(
             rows=rows,
