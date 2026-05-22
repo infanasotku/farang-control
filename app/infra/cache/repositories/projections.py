@@ -55,3 +55,10 @@ class RedisEngineProjectionRepository(RedisRepository):
             return None
 
         return lock_token
+
+    async def release_syncing_lock(self, lock_token: str) -> None:
+        lock_key = CELERY_KEY_PREFIX + "syncing-lock"
+        lock = self._redis.lock(lock_key)
+        lock.local.token = lock_token
+
+        await lock.release()

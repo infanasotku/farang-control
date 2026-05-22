@@ -13,7 +13,7 @@ from wtforms.widgets import TextArea
 
 from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
-from app.dto.projections import StartSyncingAllProjectionsCmd
+from app.dto.projections import StartSyncAllProjectionsCmd
 from app.dto.spec import UpdateSpecCmd
 from app.infra.common.correlation import get_request_context
 from app.infra.logging.logger import get_logger
@@ -163,7 +163,7 @@ class EngineView(ModelView, model=EngineProjectionModel):
         logger.info("Admin syncing all engines")
 
         ctx = get_request_context()
-        cmd = StartSyncingAllProjectionsCmd(correlation_id=ctx.request_id)
-        await svc.start_syncing_all_projections(cmd)
+        cmd = StartSyncAllProjectionsCmd(correlation_id=ctx.request_id)
+        await svc.start_sync_all_projections(cmd)
 
         return RedirectResponse(request.url_for("admin:list", identity=self.identity))

@@ -1,8 +1,14 @@
+import asyncio
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
 from app.domains.state import DerivedEngineStatus, derive_liveness
-from app.dto.projections import DerivedProjection, StartSyncingAllProjectionsCmd, UpsertProjection
+from app.dto.projections import (
+    DerivedProjection,
+    StartSyncAllProjectionsCmd,
+    SyncAllProjectionsCmd,
+    UpsertProjection,
+)
 from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.common.time import now_utc
 from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
@@ -69,7 +75,7 @@ class EngineProjectionService:
         if upsert is not None:
             await self._repo.upsert(upsert)
 
-    async def start_syncing_all_projections(self, cmd: StartSyncingAllProjectionsCmd):
+    async def start_sync_all_projections(self, cmd: StartSyncAllProjectionsCmd):
         from app.controllers.tasks.projections import sync_all_projections_task
 
         logger.info("Starting sync of all engine projections")
@@ -79,4 +85,10 @@ class EngineProjectionService:
             logger.warning("Another sync is already in progress, skipping")
             return
 
-        sync_all_projections_task.apply_async(task_id=cmd.correlation_id)
+        sync_all_projections_task.apply_async(kwargs={"lock_token": lock_token}, task_id=cmd.correlation_id)
+
+    async def sync_all_projections(self, cmd: SyncAllProjectionsCmd):
+        logger.info("Syncing all engine projections")
+        await asyncio.sleep(10)
+
+        await self._repo.release_syncing_lock(cmd.lock_token)

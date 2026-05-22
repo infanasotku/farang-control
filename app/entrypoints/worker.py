@@ -3,6 +3,7 @@ from celery import Celery, signals
 from app.container import Container
 from app.controllers.tasks.runtime import create_runtime, stop_runtime
 from app.controllers.tasks.task import BaseTask
+from app.infra.cache.common import KEY_PREFIX
 from app.infra.logging import create_logger, logger
 
 create_logger(with_process_name=True)
@@ -22,6 +23,9 @@ def create_app():
         "control-worker",
         broker=str(settings.rabbitmq.dsn),
         backend=str(settings.redis.dsn),
+        result_backend_transport_options={
+            "global_keyprefix": str(KEY_PREFIX) + ":",
+        },
         worker_hijack_root_logger=False,
         #
         task_cls=BaseTask,

@@ -34,5 +34,9 @@ class DerivedProjection(Projection):
     liveness: LivenessStatus | None = None
 
 
-class StartSyncingAllProjectionsCmd(BaseModel):
+class StartSyncAllProjectionsCmd(BaseModel):
     correlation_id: str
+
+
+class SyncAllProjectionsCmd(BaseModel):
+    lock_token: str
