@@ -2,6 +2,7 @@ from celery import Celery, signals
 
 from app.container import Container
 from app.controllers.tasks.runtime import create_runtime, stop_runtime
+from app.controllers.tasks.task import BaseTask
 from app.infra.logging import create_logger, logger
 
 create_logger(with_process_name=True)
@@ -22,11 +23,16 @@ def create_app():
         broker=str(settings.rabbitmq.dsn),
         backend=str(settings.redis.dsn),
         worker_hijack_root_logger=False,
+        #
+        task_cls=BaseTask,
+        #
+        include=["app.controllers.tasks"],
     )
 
     @signals.worker_process_init.connect(weak=False)
     def on_worker_process_init(**kwargs):
         container = Container()
+        container.wire(packages=["app.controllers.tasks"])
 
         create_runtime(container)
 

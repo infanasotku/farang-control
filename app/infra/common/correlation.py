@@ -11,7 +11,14 @@ class RequestContext:
 _correlation_id = ContextVar("correlation_id", default=None)
 
 
-def get_request_context() -> RequestContext | None:
+def get_request_context() -> RequestContext:
+    ctx = _correlation_id.get()
+    if not ctx:
+        raise ValueError("Request context not found")
+    return ctx
+
+
+def get_request_context_save() -> RequestContext | None:
     return _correlation_id.get()
 
 

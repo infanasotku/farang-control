@@ -4,6 +4,7 @@ from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import Request
+from fastapi.responses import RedirectResponse
 from markupsafe import Markup, escape
 from sqladmin import ModelView, action
 from sqladmin.fields import JSONField
@@ -12,7 +13,9 @@ from wtforms.widgets import TextArea
 
 from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
+from app.controllers.tasks.projections import sync_all_projections_task
 from app.dto.spec import UpdateSpecCmd
+from app.infra.common.correlation import get_request_context
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
 from app.services.projections.engine import EngineProjectionService
@@ -151,5 +154,10 @@ class EngineView(ModelView, model=EngineProjectionModel):
         add_in_detail=False,
         add_in_list=True,
     )
-    async def start_syncing_all_projections(self, request: Request) -> None:
+    async def start_syncing_all_projections(self, request: Request):
         logger.info("Admin syncing all engines")
+
+        ctx = get_request_context()
+        sync_all_projections_task.apply_async(task_id=ctx.request_id)
+
+        return RedirectResponse(request.url_for("admin:list", identity=self.identity))
