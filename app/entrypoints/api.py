@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
         modules=[
             "app.controllers.admin.views",
             "app.controllers.admin.main",
+            "app.infra.cache.lock",
         ],
     )
     settings = container.settings()

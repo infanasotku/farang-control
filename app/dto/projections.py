@@ -32,3 +32,7 @@ class DerivedProjection(Projection):
     model_config = ConfigDict(from_attributes=True)
 
     liveness: LivenessStatus | None = None
+
+
+class StartSyncingAllProjectionsCmd(BaseModel):
+    correlation_id: str

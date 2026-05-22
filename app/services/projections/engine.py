@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
+from app.controllers.tasks.projections import sync_all_projections_task
 from app.domains.state import DerivedEngineStatus, derive_liveness
-from app.dto.projections import DerivedProjection, UpsertProjection
+from app.dto.projections import DerivedProjection, StartSyncingAllProjectionsCmd, UpsertProjection
 from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.common.time import now_utc
 from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
@@ -68,3 +69,13 @@ class EngineProjectionService:
 
         if upsert is not None:
             await self._repo.upsert(upsert)
+
+    async def start_syncing_all_projections(self, cmd: StartSyncingAllProjectionsCmd):
+        logger.info("Starting sync of all engine projections")
+
+        lock_token = await self._repo.try_lock_syncing()
+        if lock_token is None:
+            logger.info("Another sync is already in progress, skipping")
+            return
+
+        sync_all_projections_task.apply_async(task_id=cmd.correlation_id)

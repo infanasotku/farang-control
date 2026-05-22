@@ -1,5 +1,5 @@
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.dto.projections import Projection, UpsertProjection
 from app.infra.cache.common import KEY_PREFIX, as_awaitable, scan_keys_page
@@ -44,3 +44,14 @@ class RedisEngineProjectionRepository(RedisRepository):
     async def delete(self, engine_id: UUID) -> None:
         key = PROJECTION_KEY + str(engine_id)
         await as_awaitable(self._redis.delete(key))
+
+    async def try_lock_syncing(self) -> str | None:
+        lock_key = PROJECTION_KEY + "syncing-lock"
+        lock_token = str(uuid4())
+
+        lock = self._redis.lock(lock_key, timeout=60 * 30, blocking=False)
+        acquired = await lock.acquire(token=lock_token)
+        if not acquired:
+            return None
+
+        return lock_token
