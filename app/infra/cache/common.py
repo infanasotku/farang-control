@@ -15,7 +15,7 @@ class RedisKey(str):
 
 
 KEY_PREFIX = RedisKey("farang")
-
+CELERY_KEY_PREFIX = KEY_PREFIX + "celery"
 
 T = TypeVar("T")
 

@@ -1,3 +1,5 @@
+import asyncio
+
 from celery import shared_task
 from dependency_injector.wiring import Provide, inject
 
@@ -18,3 +20,5 @@ def sync_all_projections_task():
 @inject
 async def sync_all_projections(svc: EngineProjectionService = Provide[Container.projection_service]):
     logger.info("Hello world!")
+
+    await asyncio.sleep(10)
