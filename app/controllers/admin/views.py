@@ -5,7 +5,7 @@ from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import Request
 from markupsafe import Markup, escape
-from sqladmin import ModelView
+from sqladmin import ModelView, action
 from sqladmin.fields import JSONField
 from sqladmin.pagination import Pagination
 from wtforms.widgets import TextArea
@@ -140,3 +140,16 @@ class EngineView(ModelView, model=EngineProjectionModel):
         )
 
         return pagination
+
+    @action(
+        name="sync_projections",
+        label="Sync Projections",
+        confirmation_message=(
+            "Are you sure you want to sync all engine projections? "
+            "This will update the status of all engines based on their actual state."
+        ),
+        add_in_detail=False,
+        add_in_list=True,
+    )
+    async def start_syncing_all_projections(self, request: Request) -> None:
+        logger.info("Admin syncing all engines")
