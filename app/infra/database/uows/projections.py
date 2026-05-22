@@ -3,21 +3,17 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
 from app.infra.database.repositories.engine import PgEngineRepository, PgEngineSpecRepository
-from app.infra.database.repositories.projections import PgEngineProjectionRepository, PgEngineProjectionWriteRepository
 from app.infra.database.repositories.state import PgStateRepository
 from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
 class ProjectionReadContext(Protocol):
-    projections: PgEngineProjectionRepository
     specs: PgEngineSpecRepository
     engines: PgEngineRepository
     states: PgStateRepository
 
 
 class ProjectionWriteContext(Protocol):
-    projections: PgEngineProjectionWriteRepository
-
     specs: PgEngineSpecRepository
     engines: PgEngineRepository
     states: PgStateRepository
@@ -26,7 +22,6 @@ class ProjectionWriteContext(Protocol):
 class PgProjectionReadContext(PgReadUOWContext, ProjectionReadContext):
     def __init__(self, *, session: AsyncSession):
         super().__init__(session=session)
-        self.projections = PgEngineProjectionRepository(session)
         self.engines = PgEngineRepository(session)
         self.specs = PgEngineSpecRepository(session)
         self.states = PgStateRepository(session)
@@ -35,7 +30,6 @@ class PgProjectionReadContext(PgReadUOWContext, ProjectionReadContext):
 class PgProjectionWriteContext(PgWriteUOWContext, ProjectionWriteContext):
     def __init__(self, *, session: AsyncSession, transaction: AsyncSessionTransaction):
         super().__init__(session=session, transaction=transaction)
-        self.projections = PgEngineProjectionWriteRepository(session)
         self.engines = PgEngineRepository(session)
         self.specs = PgEngineSpecRepository(session)
         self.states = PgStateRepository(session)

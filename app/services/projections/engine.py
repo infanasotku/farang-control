@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
-from app.domains.state import DerivedEngineStatus
-from app.dto.projections import UpsertProjection
+from app.domains.state import DerivedEngineStatus, derive_liveness
+from app.dto.projections import DerivedProjection, UpsertProjection
 from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.common.time import now_utc
 from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
@@ -17,6 +17,21 @@ class EngineProjectionService:
     ) -> None:
         self._uow = uow
         self._repo = repo
+
+    async def get(self, *, offset: int = 0, limit: int = 100) -> list[DerivedProjection]:
+        projections = await self._repo.get(offset=offset, limit=limit)
+
+        now = now_utc()
+        derived = []
+        for p in projections:
+            row = DerivedProjection.model_validate(p)
+
+            if p.last_seen_at is not None:
+                row.liveness = derive_liveness(now=now, last_seen_at=p.last_seen_at)
+
+            derived.append(row)
+
+        return derived
 
     async def sync_engine(self, engine_id: UUID):
         logger.info(f"Syncing projection for engine: engine_id={engine_id}")

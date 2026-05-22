@@ -11,12 +11,11 @@ from sqladmin.pagination import Pagination
 from wtforms.widgets import TextArea
 
 from app.container import Container
-from app.domains.state import derive_liveness
+from app.controllers.admin.models import EngineProjection as EngineProjectionModel
 from app.dto.spec import UpdateSpecCmd
-from app.infra.common.time import now_utc
-from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
+from app.services.projections.engine import EngineProjectionService
 from app.services.spec import SpecService
 
 logger = get_logger().getChild(__name__)
@@ -57,14 +56,14 @@ class EngineView(ModelView, model=EngineProjectionModel):
         EngineProjectionModel.phase,
         EngineProjectionModel.sync,
         EngineProjectionModel.config,
-        "liveness",
+        EngineProjectionModel.liveness,
     ]
     column_details_list = column_list.copy()
 
     form_excluded_columns = [
         EngineProjectionModel.phase,
         EngineProjectionModel.sync,
-        EngineProjectionModel.last_seen_at,
+        EngineProjectionModel.liveness,
     ]
     form_overrides = {
         "config": ConfigJSONField,
@@ -118,13 +117,37 @@ class EngineView(ModelView, model=EngineProjectionModel):
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
 
-    async def list(self, request: Request) -> Pagination:
-        pagination = await super().list(request)
-        now = now_utc()
-        for row in pagination.rows:
-            if row.last_seen_at is None:
-                row.liveness = ""
-            else:
-                row.liveness = derive_liveness(now=now, last_seen_at=row.last_seen_at)
+    @inject
+    async def list(
+        self,
+        request: Request,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ) -> Pagination:
+        page = self.validate_page_number(request.query_params.get("page"), 1)
+        page_size = self.validate_page_number(request.query_params.get("pageSize"), 0)
+        page_size = min(page_size or self.page_size, max(self.page_size_options))
+
+        projections = await svc.get(offset=(page - 1) * page_size, limit=page_size)
+        count = len(projections)
+
+        rows = [
+            EngineProjectionModel(
+                engine_id=p.engine_id,
+                name=p.name,
+                config=p.config,
+                enabled=p.enabled,
+                phase=p.phase,
+                sync=p.sync,
+                liveness=p.liveness,
+            )
+            for p in projections
+        ]
+
+        pagination = Pagination(
+            rows=rows,
+            page=page,
+            page_size=page_size,
+            count=count,
+        )
 
         return pagination

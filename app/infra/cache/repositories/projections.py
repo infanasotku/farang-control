@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 from app.dto.projections import Projection, UpsertProjection
@@ -25,13 +26,20 @@ class RedisEngineProjectionRepository(RedisRepository):
 
         vals = await as_awaitable(pipe.execute())
 
-        return [Projection.model_validate(v) for v in vals if v]
+        data = [
+            ({k: json.loads(v) for k, v in val.items()} | {"engine_id": key.split(":")[-1]})
+            for key, val in zip(keys, vals)
+            if val
+        ]
+
+        return [Projection.model_validate(item) for item in data]
 
     async def upsert(self, projection: UpsertProjection) -> None:
         key = PROJECTION_KEY + str(projection.engine_id)
 
-        data = projection.model_dump(exclude={"engine_id"}, mode="json")
-        await as_awaitable(self._redis.hset(key, projection.engine_id.hex, mapping=data))
+        data = projection.model_dump(exclude={"engine_id"}, mode="json", exclude_none=True)
+        payload = {k: json.dumps(v) for k, v in data.items()}
+        await as_awaitable(self._redis.hset(key, mapping=payload))
 
     async def delete(self, engine_id: UUID) -> None:
         key = PROJECTION_KEY + str(engine_id)

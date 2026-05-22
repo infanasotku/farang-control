@@ -1,10 +1,11 @@
-from datetime import datetime
+from sqlalchemy import JSON, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from sqlalchemy import JSON, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from app.domains.state import InstancePhase, LivenessStatus, SyncStatus
+from app.infra.database.models.base import uuidpk
 
-from app.domains.state import InstancePhase, SyncStatus
-from app.infra.database.models.base import Base, uuidpk
+
+class Base(DeclarativeBase): ...
 
 
 class EngineProjection(Base):
@@ -18,4 +19,4 @@ class EngineProjection(Base):
 
     phase: Mapped[InstancePhase] = mapped_column(String(20), nullable=True)
     sync: Mapped[SyncStatus] = mapped_column(String(20), nullable=True)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    liveness: Mapped[LivenessStatus] = mapped_column(String(20), nullable=True)
