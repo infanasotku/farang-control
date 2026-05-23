@@ -20,4 +20,4 @@ livenessProbe:
       - celery -A app.entrypoints.worker:app inspect ping -d celery@$HOSTNAME
   initialDelaySeconds: 10
   periodSeconds: 10
-  timeoutSeconds: 5
+  timeoutSeconds: 10
