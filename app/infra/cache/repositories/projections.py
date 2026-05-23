@@ -76,7 +76,7 @@ class RedisEngineProjectionRepository(RedisRepository):
         keys_for_deletion = set()
 
         async for key in self._redis.scan_iter(prefix):
-            engine_id_str = key.decode().split(":")[-1]
+            engine_id_str = key.split(":")[-1]
             try:
                 engine_id = UUID(engine_id_str)
             except ValueError:
@@ -84,6 +84,9 @@ class RedisEngineProjectionRepository(RedisRepository):
 
             if engine_id not in valid_engine_ids:
                 keys_for_deletion.add(key)
+
+        if not keys_for_deletion:
+            return
 
         pipe = self._redis.pipeline(transaction=False)
 
