@@ -1,0 +1,21 @@
+container:
+  name: worker
+  port: 5101
+  command: ["celery"]
+  args: 
+    [
+      "-A",
+      "app.entrypoints.worker:app",
+      "worker",
+      "--concurrency",
+      "2",
+      "--loglevel=info"
+    ]
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 5100
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5

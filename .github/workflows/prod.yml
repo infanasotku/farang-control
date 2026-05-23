@@ -74,3 +74,17 @@ jobs:
         with:
           service: api
           environment: prod
+
+  worker:
+    name: Deploy worker prod
+    runs-on: [self-hosted, helmfile]
+    needs: [migrate]
+    environment: stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy worker prod
+        uses: ./.github/actions/deploy
+        with:
+          service: worker
+          environment: prod

@@ -1,6 +1,7 @@
 container:
   name: api
   port: 5100
+  command: ["uvicorn"]
   args:
     [
       "app.entrypoints.api:create_app",
@@ -19,9 +20,11 @@ ingress:
   path: /
 
 livenessProbe:
-  httpGet:
-    path: /healthz
-    port: 5100
+  exec:
+    command:
+      - sh
+      - -c
+      - celery -A app.entrypoints.worker:app inspect ping -d celery@$HOSTNAME
   initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 5

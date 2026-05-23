@@ -87,3 +87,36 @@ releases:
             rm -f charts/api/temp-secrets.yaml
             rm -f charts/api/Chart.lock
             rm -rf charts/api/charts
+
+  - name: worker
+    namespace: {{ .Environment.Values.namespace }}
+    labels:
+      svc: worker
+    chart: ./charts/worker
+    values:
+      - deploy/values/common/common.values.yaml
+      - deploy/values/common/worker.values.yaml
+      - deploy/values/{{ .Environment.Name }}/common.values.yaml
+      - deploy/values/{{ .Environment.Name }}/worker.values.yaml
+    set:
+      - name: environment
+        value: {{ .Environment.Name }}
+      - name: container.tag
+        value: {{ printf "%v" (required "tag is required; pass --state-values-set tag=<value>" (index .Environment.Values "tag")) }}
+    hooks:
+      - events: ["prepare"]
+        command: bash
+        args:
+          - -c
+          - |
+            set -e
+            sops -d {{ .Environment.Values.secretsFile }} > charts/worker/temp-secrets.yaml
+      - events: ["cleanup"]
+        command: bash
+        args:
+          - -c
+          - |
+            set -e
+            rm -f charts/worker/temp-secrets.yaml
+            rm -f charts/worker/Chart.lock
+            rm -rf charts/worker/charts
