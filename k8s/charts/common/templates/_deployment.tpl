@@ -42,7 +42,7 @@ spec:
           image: {{ .Values.container.image }}:{{ .Values.container.tag }}
           imagePullPolicy: Always
 
-          command: ["uvicorn"]
+          command: {{ .Values.container.command | toJson }}
           args: {{ .Values.container.args | toJson }}
           ports:
             - containerPort: {{ .Values.container.port }}

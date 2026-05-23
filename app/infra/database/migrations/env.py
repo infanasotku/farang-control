@@ -2,7 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool, text
+from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -13,7 +13,7 @@ settings = Container().settings()
 config = context.config
 config.set_main_option(
     "sqlalchemy.url",
-    settings.postgres.dsn,
+    str(settings.postgres.dsn),
 )
 
 if config.config_file_name is not None:
@@ -48,7 +48,6 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
-    connection.execute(text(f"set search_path to '{settings.postgres.schema_}'"))
 
     with context.begin_transaction():
         context.run_migrations()

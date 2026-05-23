@@ -1,6 +1,7 @@
 import logging
 import logging.config
 import pathlib
+from typing import Any
 
 import yaml
 
@@ -14,8 +15,11 @@ def _get_config() -> dict:
         return yaml.safe_load(config_file)
 
 
-def _create_logger() -> logging.Logger:
+def create_logger(with_process_name: bool = False) -> logging.Logger:
     config = _get_config()
+
+    if with_process_name:
+        config["formatters"]["default"]["format"] = config["formatters"]["default-with-process"]["format"]
 
     logging.config.dictConfig(config)
     return logging.getLogger("uvicorn")
@@ -24,5 +28,13 @@ def _create_logger() -> logging.Logger:
 def get_logger() -> logging.Logger:
     global _LOGGER
     if _LOGGER is None:
-        _LOGGER = _create_logger()
+        _LOGGER = create_logger()
     return _LOGGER
+
+
+class LazyLogger:
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_logger(), name)
+
+
+logger: logging.Logger = LazyLogger()  # type: ignore

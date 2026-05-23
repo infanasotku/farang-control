@@ -3,5 +3,4 @@ container:
 
 config:
   ENV: prod
-
-  POSTGRES__DATABASE: control
+  REDIS__CLIENT: control

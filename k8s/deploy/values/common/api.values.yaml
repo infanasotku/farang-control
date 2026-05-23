@@ -1,6 +1,7 @@
 container:
   name: api
   port: 5100
+  command: ["uvicorn"]
   args:
     [
       "app.entrypoints.api:create_app",

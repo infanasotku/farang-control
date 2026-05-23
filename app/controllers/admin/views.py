@@ -3,20 +3,23 @@ from typing import Any
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import Request
+from fastapi import HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from markupsafe import Markup, escape
-from sqladmin import ModelView
+from sqladmin import ModelView, action
 from sqladmin.fields import JSONField
 from sqladmin.pagination import Pagination
 from wtforms.widgets import TextArea
 
 from app.container import Container
-from app.domains.state import derive_liveness
+from app.controllers.admin.models import EngineProjection as EngineProjectionModel
+from app.domains.exceptions.engine import EngineNotFoundError
+from app.dto.projections import StartSyncAllProjectionsCmd
 from app.dto.spec import UpdateSpecCmd
-from app.infra.common.time import now_utc
-from app.infra.database.models.projections import EngineProjection as EngineProjectionModel
+from app.infra.common.correlation import get_request_context
 from app.infra.logging.logger import get_logger
 from app.services.engine import EngineService
+from app.services.projections.engine import EngineProjectionService
 from app.services.spec import SpecService
 
 logger = get_logger().getChild(__name__)
@@ -57,14 +60,14 @@ class EngineView(ModelView, model=EngineProjectionModel):
         EngineProjectionModel.phase,
         EngineProjectionModel.sync,
         EngineProjectionModel.config,
-        "liveness",
+        EngineProjectionModel.liveness,
     ]
     column_details_list = column_list.copy()
 
     form_excluded_columns = [
         EngineProjectionModel.phase,
         EngineProjectionModel.sync,
-        EngineProjectionModel.last_seen_at,
+        EngineProjectionModel.liveness,
     ]
     form_overrides = {
         "config": ConfigJSONField,
@@ -118,13 +121,66 @@ class EngineView(ModelView, model=EngineProjectionModel):
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
 
-    async def list(self, request: Request) -> Pagination:
-        pagination = await super().list(request)
-        now = now_utc()
-        for row in pagination.rows:
-            if row.last_seen_at is None:
-                row.liveness = ""
-            else:
-                row.liveness = derive_liveness(now=now, last_seen_at=row.last_seen_at)
+    @inject
+    async def get_object_for_details(
+        self,
+        request: Request,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ) -> Any:
+        pk = UUID(request.path_params["pk"])
+        try:
+            projection = await svc.get_by_id(pk)
+        except EngineNotFoundError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engine not found")
+        return EngineProjectionModel.from_projection(projection)
+
+    async def get_object_for_edit(self, request: Request) -> Any:
+        return await self.get_object_for_details(request)
+
+    @inject
+    async def list(
+        self,
+        request: Request,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ) -> Pagination:
+        page = self.validate_page_number(request.query_params.get("page"), 1)
+        page_size = self.validate_page_number(request.query_params.get("pageSize"), 0)
+        page_size = min(page_size or self.page_size, max(self.page_size_options))
+
+        projections = await svc.get(offset=(page - 1) * page_size, limit=page_size)
+        count = len(projections)
+
+        rows = [EngineProjectionModel.from_projection(p) for p in projections]
+
+        pagination = Pagination(
+            rows=rows,
+            page=page,
+            page_size=page_size,
+            count=count,
+        )
 
         return pagination
+
+    @action(
+        name="sync_projections",
+        label="Sync Projections",
+        confirmation_message=(
+            "Are you sure you want to sync all engine projections? "
+            "This will update the status of all engines based on their actual state."
+        ),
+        add_in_detail=False,
+        add_in_list=True,
+    )
+    @inject
+    async def start_syncing_all_projections(
+        self,
+        request: Request,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ):
+        logger.info("Admin syncing all engines")
+
+        ctx = get_request_context()
+        cmd = StartSyncAllProjectionsCmd(correlation_id=ctx.request_id)
+        await svc.start_sync_all_projections(cmd)
+
+        return RedirectResponse(request.url_for("admin:list", identity=self.identity))

@@ -1,0 +1,23 @@
+container:
+  name: worker
+  port: 5101
+  command: ["celery"]
+  args: 
+    [
+      "-A",
+      "app.entrypoints.worker:app",
+      "worker",
+      "--concurrency",
+      "2",
+      "--loglevel=info"
+    ]
+
+livenessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - celery -A app.entrypoints.worker:app inspect ping -d celery@$HOSTNAME
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5

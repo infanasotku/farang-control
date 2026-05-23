@@ -3,5 +3,4 @@ container:
 
 config:
   ENV: test
-
-  POSTGRES__DATABASE: control-test
+  REDIS__CLIENT: control-test

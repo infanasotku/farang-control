@@ -3,7 +3,7 @@ import re
 
 import uvicorn.logging
 
-from app.infra.common.correlation import get_request_context
+from app.infra.common.correlation import get_request_context_save
 
 
 class CustomLoggerMixin(logging.Formatter):
@@ -30,6 +30,6 @@ class AccessLogFormatter(CustomLoggerMixin, uvicorn.logging.AccessFormatter): ..
 
 class CorrelationIdFilter(logging.Filter):
     def filter(self, record):
-        ctx = get_request_context()
+        ctx = get_request_context_save()
         record.correlation_id = ctx.request_id if ctx else "-"
         return True

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from celery import Celery
 from fastapi import FastAPI
 
 from app.container import Container
@@ -28,14 +29,22 @@ def create_app() -> FastAPI:
     read_engine = container.read_engine()
     write_engine = container.write_engine()
 
+    Celery(
+        "control-worker",
+        broker=str(settings.rabbitmq.dsn),
+        backend=str(settings.redis.dsn),
+    )
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await container.init_resources()  # type: ignore
         try:
             yield
         finally:
             logger.info("Disposing database engines")
             await read_engine.dispose()
             await write_engine.dispose()
+            await container.shutdown_resources()  # type: ignore
 
     app = FastAPI(lifespan=lifespan)
     app.state.container = container

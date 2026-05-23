@@ -53,3 +53,16 @@ jobs:
         with:
           service: api
           environment: test
+  worker:
+    name: Deploy worker test
+    runs-on: [self-hosted, helmfile]
+    needs: [migrate]
+    environment: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy worker Test
+        uses: ./.github/actions/deploy
+        with:
+          service: worker
+          environment: test
