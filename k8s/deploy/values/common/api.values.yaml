@@ -20,11 +20,9 @@ ingress:
   path: /
 
 livenessProbe:
-  exec:
-    command:
-      - sh
-      - -c
-      - celery -A app.entrypoints.worker:app inspect ping -d celery@$HOSTNAME
+  httpGet:
+    path: /healthz
+    port: 5100
   initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 5

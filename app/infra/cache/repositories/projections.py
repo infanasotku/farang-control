@@ -1,5 +1,6 @@
 import json
 from uuid import UUID, uuid4
+from venv import logger
 
 from app.dto.projections import Projection, UpsertProjection
 from app.infra.cache.common import CELERY_KEY_PREFIX, KEY_PREFIX, as_awaitable, scan_keys_page
@@ -87,6 +88,8 @@ class RedisEngineProjectionRepository(RedisRepository):
 
         if not keys_for_deletion:
             return
+
+        logger.info(f"Removing {len(keys_for_deletion)} extra engine projections from cache")
 
         pipe = self._redis.pipeline(transaction=False)
 
