@@ -7,7 +7,7 @@ from pytest import fixture
 
 from app.domains.engine import Engine, EngineSpec
 from app.domains.state import EngineRuntimeState, InstancePhase, LivenessStatus, SyncStatus
-from app.dto.projections import Projection, StartSyncAllProjectionsCmd
+from app.dto.projections import Projection, StartSyncAllProjectionsCmd, SyncAllProjectionsCmd
 from app.services.projections.engine import EngineProjectionService
 
 
@@ -18,6 +18,7 @@ def repo() -> MagicMock:
     repo.upsert = AsyncMock()
     repo.delete = AsyncMock()
     repo.try_lock_syncing = AsyncMock(return_value=None)
+    repo.release_syncing_lock = AsyncMock()
     return repo
 
 
@@ -28,6 +29,7 @@ def projection_ctx(uow: MagicMock):
     ctx.specs = MagicMock()
     ctx.states = MagicMock()
 
+    ctx.engines.get_engine_ids = AsyncMock(return_value=[])
     ctx.engines.get_engine_by_id = AsyncMock(return_value=None)
     ctx.specs.get_engine_spec = AsyncMock(return_value=None)
     ctx.states.get_engine_state = AsyncMock(return_value=None)
@@ -206,3 +208,55 @@ class TestStartSyncAllProjections(ProjectionServiceDeps):
 
         repo.try_lock_syncing.assert_awaited_once_with()
         task.apply_async.assert_not_called()
+
+
+class TestSyncAllProjections(ProjectionServiceDeps):
+    @pytest.mark.asyncio
+    async def test_syncs_all_engine_ids_and_releases_lock(
+        self, projection_ctx: MagicMock, uow: MagicMock, repo: MagicMock
+    ):
+        engine_ids = [uuid4(), uuid4(), uuid4()]
+        projection_ctx.engines.get_engine_ids.return_value = engine_ids
+        cmd = SyncAllProjectionsCmd(lock_token="lock-token")
+
+        with patch.object(self.svc, "_sync_engine", new=AsyncMock()) as sync_engine:
+            await self.svc.sync_all_projections(cmd)
+
+        assert uow.begin.call_args_list == [call(write=False)]
+        projection_ctx.engines.get_engine_ids.assert_awaited_once_with()
+        assert sync_engine.await_args_list == [call(engine_id, ctx=projection_ctx) for engine_id in engine_ids]
+        repo.release_syncing_lock.assert_awaited_once_with("lock-token")
+
+    @pytest.mark.asyncio
+    async def test_releases_lock_when_there_are_no_engines(
+        self, projection_ctx: MagicMock, uow: MagicMock, repo: MagicMock
+    ):
+        cmd = SyncAllProjectionsCmd(lock_token="lock-token")
+
+        with patch.object(self.svc, "_sync_engine", new=AsyncMock()) as sync_engine:
+            await self.svc.sync_all_projections(cmd)
+
+        assert uow.begin.call_args_list == [call(write=False)]
+        projection_ctx.engines.get_engine_ids.assert_awaited_once_with()
+        sync_engine.assert_not_awaited()
+        repo.release_syncing_lock.assert_awaited_once_with("lock-token")
+
+    @pytest.mark.asyncio
+    async def test_syncs_engine_ids_in_batches_of_ten(self, projection_ctx: MagicMock, repo: MagicMock):
+        engine_ids = [uuid4() for _ in range(11)]
+        projection_ctx.engines.get_engine_ids.return_value = engine_ids
+        cmd = SyncAllProjectionsCmd(lock_token="lock-token")
+
+        sync_engine = MagicMock(side_effect=lambda engine_id, *, ctx: (engine_id, ctx))
+        with (
+            patch.object(self.svc, "_sync_engine", new=sync_engine),
+            patch("app.services.projections.engine.asyncio.gather", new=AsyncMock()) as gather,
+        ):
+            await self.svc.sync_all_projections(cmd)
+
+        assert sync_engine.call_args_list == [call(engine_id, ctx=projection_ctx) for engine_id in engine_ids]
+        assert gather.await_args_list == [
+            call(*[(engine_id, projection_ctx) for engine_id in engine_ids[:10]]),
+            call((engine_ids[10], projection_ctx)),
+        ]
+        repo.release_syncing_lock.assert_awaited_once_with("lock-token")
