@@ -40,33 +40,34 @@ class EngineProjectionService:
         return derived
 
     async def sync_engine(self, engine_id: UUID):
+        async with self._uow.begin(write=False) as ctx:
+            await self._sync_engine(engine_id, ctx=ctx)
+
+    async def _sync_engine(self, engine_id: UUID, *, ctx: ProjectionReadContext):
         logger.info(f"Syncing projection for engine: engine_id={engine_id}")
 
         upsert = None
-        async with self._uow.begin(write=False) as ctx:
-            engine = await ctx.engines.get_engine_by_id(engine_id)
-            if engine is None:
-                logger.info(f"Projection sync found no engine, deleting projection: engine_id={engine_id}")
-            else:
-                spec = await ctx.specs.get_engine_spec(engine_id)
-                if spec is None:
-                    logger.info(f"Projection sync found no spec for engine, using defaults: engine_id={engine_id}")
+        engine = await ctx.engines.get_engine_by_id(engine_id)
+        if engine is None:
+            logger.info(f"Projection sync found no engine, deleting projection: engine_id={engine_id}")
+        else:
+            spec = await ctx.specs.get_engine_spec(engine_id)
+            if spec is None:
+                logger.info(f"Projection sync found no spec for engine, using defaults: engine_id={engine_id}")
 
-                state = await ctx.states.get_engine_state(engine_id)
-                if state is None:
-                    logger.info(f"Projection sync found no state for engine, using defaults: engine_id={engine_id}")
+            state = await ctx.states.get_engine_state(engine_id)
+            if state is None:
+                logger.info(f"Projection sync found no state for engine, using defaults: engine_id={engine_id}")
 
-                upsert = UpsertProjection(
-                    engine_id=engine.id,
-                    name=engine.name,
-                    config=spec.config if spec else {},
-                    enabled=spec.enabled if spec else False,
-                    phase=state.reported_phase if state else None,
-                    last_seen_at=state.last_seen_at if state else None,
-                    sync=DerivedEngineStatus.derive(now_utc(), spec=spec, runtime=state).sync
-                    if state and spec
-                    else None,
-                )
+            upsert = UpsertProjection(
+                engine_id=engine.id,
+                name=engine.name,
+                config=spec.config if spec else {},
+                enabled=spec.enabled if spec else False,
+                phase=state.reported_phase if state else None,
+                last_seen_at=state.last_seen_at if state else None,
+                sync=DerivedEngineStatus.derive(now_utc(), spec=spec, runtime=state).sync if state and spec else None,
+            )
 
         if engine is None:
             await self._repo.delete(engine_id)
@@ -89,6 +90,12 @@ class EngineProjectionService:
 
     async def sync_all_projections(self, cmd: SyncAllProjectionsCmd):
         logger.info("Syncing all engine projections")
-        await asyncio.sleep(10)
+
+        async with self._uow.begin(write=False) as ctx:
+            engine_ids = await ctx.engines.get_engine_ids()
+
+            for i in range(0, len(engine_ids), 10):
+                batch = engine_ids[i : i + 10]
+                await asyncio.gather(*(self._sync_engine(engine_id, ctx=ctx) for engine_id in batch))
 
         await self._repo.release_syncing_lock(cmd.lock_token)

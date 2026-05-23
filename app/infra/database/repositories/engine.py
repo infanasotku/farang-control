@@ -23,6 +23,12 @@ class PgEngineRepository(PostgresRepository):
         rows = await self._session.scalars(stmt)
         return [engine_from_model(row) for row in rows]
 
+    async def get_engine_ids(self) -> list[UUID]:
+        logger.debug("Loading all engine ids")
+        stmt = select(EngineModel.id)
+        rows = await self._session.scalars(stmt)
+        return list(rows)
+
     async def get_engine_by_id(self, engine_id: UUID) -> Engine | None:
         logger.debug(f"Loading engine by id: engine_id={engine_id}")
         stmt = select(EngineModel).where(EngineModel.id == engine_id)
