@@ -6,6 +6,7 @@ from mock import AsyncMock, MagicMock, call, patch
 from pytest import fixture
 
 from app.domains.engine import Engine, EngineSpec
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.state import EngineRuntimeState, InstancePhase, LivenessStatus, SyncStatus
 from app.dto.projections import Projection, StartSyncAllProjectionsCmd, SyncAllProjectionsCmd
 from app.services.projections.engine import EngineProjectionService
@@ -15,6 +16,7 @@ from app.services.projections.engine import EngineProjectionService
 def repo() -> MagicMock:
     repo = MagicMock()
     repo.get = AsyncMock(return_value=[])
+    repo.get_by_id = AsyncMock(return_value=None)
     repo.upsert = AsyncMock()
     repo.delete = AsyncMock()
     repo.try_lock_syncing = AsyncMock(return_value=None)
@@ -42,6 +44,61 @@ class ProjectionServiceDeps:
     @fixture(autouse=True)
     def _setup(self, uow: MagicMock, repo: MagicMock):
         self.svc = EngineProjectionService(uow, repo=repo)
+
+
+class TestGetById(ProjectionServiceDeps):
+    @pytest.mark.asyncio
+    async def test_returns_derived_projection_with_liveness(self, repo: MagicMock):
+        engine_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        last_seen_at = datetime(2026, 3, 14, tzinfo=timezone.utc)
+        repo.get_by_id.return_value = Projection(
+            engine_id=engine_id,
+            name="test-engine",
+            config={"mode": "proxy"},
+            enabled=True,
+            phase=InstancePhase.RUNNING,
+            last_seen_at=last_seen_at,
+            sync=SyncStatus.IN_SYNC,
+        )
+
+        with patch("app.services.projections.engine.now_utc", return_value=now):
+            result = await self.svc.get_by_id(engine_id)
+
+        repo.get_by_id.assert_awaited_once_with(engine_id)
+        assert result.engine_id == engine_id
+        assert result.name == "test-engine"
+        assert result.config == {"mode": "proxy"}
+        assert result.enabled is True
+        assert result.phase == InstancePhase.RUNNING
+        assert result.last_seen_at == last_seen_at
+        assert result.sync == SyncStatus.IN_SYNC
+        assert result.liveness == LivenessStatus.DEAD
+
+    @pytest.mark.asyncio
+    async def test_returns_derived_projection_without_liveness_when_last_seen_is_missing(self, repo: MagicMock):
+        engine_id = uuid4()
+        repo.get_by_id.return_value = Projection(
+            engine_id=engine_id,
+            name="test-engine",
+            config={},
+            enabled=False,
+        )
+
+        result = await self.svc.get_by_id(engine_id)
+
+        repo.get_by_id.assert_awaited_once_with(engine_id)
+        assert result.engine_id == engine_id
+        assert result.liveness is None
+
+    @pytest.mark.asyncio
+    async def test_raises_when_projection_is_missing(self, repo: MagicMock):
+        engine_id = uuid4()
+
+        with pytest.raises(EngineNotFoundError):
+            await self.svc.get_by_id(engine_id)
+
+        repo.get_by_id.assert_awaited_once_with(engine_id)
 
 
 class TestGet(ProjectionServiceDeps):

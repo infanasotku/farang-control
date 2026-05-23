@@ -8,6 +8,11 @@ from app.infra.cache.repositories.base import RedisRepository
 PROJECTION_KEY = KEY_PREFIX + "projections"
 
 
+def _from_redis_hash(key: str, val: dict[str, str]) -> Projection:
+    data = {k: json.loads(v) for k, v in val.items()} | {"engine_id": key.split(":")[-1]}
+    return Projection.model_validate(data)
+
+
 class RedisEngineProjectionRepository(RedisRepository):
     async def get(self, *, offset: int = 0, limit: int = 100) -> list[Projection]:
         prefix = PROJECTION_KEY + "*"
@@ -26,13 +31,15 @@ class RedisEngineProjectionRepository(RedisRepository):
 
         vals = await as_awaitable(pipe.execute())
 
-        data = [
-            ({k: json.loads(v) for k, v in val.items()} | {"engine_id": key.split(":")[-1]})
-            for key, val in zip(keys, vals)
-            if val
-        ]
+        return [_from_redis_hash(key, val) for key, val in zip(keys, vals) if val]
 
-        return [Projection.model_validate(item) for item in data]
+    async def get_by_id(self, engine_id: UUID) -> Projection | None:
+        key = PROJECTION_KEY + str(engine_id)
+        val = await as_awaitable(self._redis.hgetall(key))
+        if not val:
+            return None
+
+        return _from_redis_hash(key, val)
 
     async def upsert(self, projection: UpsertProjection) -> None:
         key = PROJECTION_KEY + str(projection.engine_id)

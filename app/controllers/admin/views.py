@@ -3,7 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import Request
+from fastapi import HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from markupsafe import Markup, escape
 from sqladmin import ModelView, action
@@ -13,6 +13,7 @@ from wtforms.widgets import TextArea
 
 from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.dto.projections import StartSyncAllProjectionsCmd
 from app.dto.spec import UpdateSpecCmd
 from app.infra.common.correlation import get_request_context
@@ -119,6 +120,22 @@ class EngineView(ModelView, model=EngineProjectionModel):
     ) -> None:
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
+
+    @inject
+    async def get_object_for_details(
+        self,
+        request: Request,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ) -> Any:
+        pk = UUID(request.path_params["pk"])
+        try:
+            projection = await svc.get_by_id(pk)
+        except EngineNotFoundError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engine not found")
+        return EngineProjectionModel.from_projection(projection)
+
+    async def get_object_for_edit(self, request: Request) -> Any:
+        return await self.get_object_for_details(request)
 
     @inject
     async def list(

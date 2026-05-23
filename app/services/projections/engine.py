@@ -2,6 +2,7 @@ import asyncio
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
+from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.state import DerivedEngineStatus, derive_liveness
 from app.dto.projections import (
     DerivedProjection,
@@ -23,6 +24,16 @@ class EngineProjectionService:
     ) -> None:
         self._uow = uow
         self._repo = repo
+
+    async def get_by_id(self, engine_id: UUID) -> DerivedProjection:
+        projection = await self._repo.get_by_id(engine_id)
+        if projection is None:
+            raise EngineNotFoundError(engine_id)
+
+        derived = DerivedProjection.model_validate(projection)
+        if projection.last_seen_at is not None:
+            derived.liveness = derive_liveness(now=now_utc(), last_seen_at=projection.last_seen_at)
+        return derived
 
     async def get(self, *, offset: int = 0, limit: int = 100) -> list[DerivedProjection]:
         projections = await self._repo.get(offset=offset, limit=limit)
