@@ -29,7 +29,7 @@ class RedisEngineProjectionRepository(RedisRepository):
         for key in keys:
             pipe.hgetall(key)
 
-        vals = await as_awaitable(pipe.execute())
+        vals = await pipe.execute()
 
         return [_from_redis_hash(key, val) for key, val in zip(keys, vals) if val]
 
@@ -69,3 +69,25 @@ class RedisEngineProjectionRepository(RedisRepository):
         lock.local.token = lock_token
 
         await lock.release()
+
+    async def remove_extra(self, valid_engine_ids: set[UUID]) -> None:
+        prefix = PROJECTION_KEY + "*"
+
+        keys_for_deletion = set()
+
+        async for key in self._redis.scan_iter(prefix):
+            engine_id_str = key.decode().split(":")[-1]
+            try:
+                engine_id = UUID(engine_id_str)
+            except ValueError:
+                continue
+
+            if engine_id not in valid_engine_ids:
+                keys_for_deletion.add(key)
+
+        pipe = self._redis.pipeline(transaction=False)
+
+        for key in keys_for_deletion:
+            pipe.delete(key)
+
+        await pipe.execute()

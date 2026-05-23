@@ -109,4 +109,5 @@ class EngineProjectionService:
                 batch = engine_ids[i : i + 10]
                 await asyncio.gather(*(self._sync_engine(engine_id, ctx=ctx) for engine_id in batch))
 
+        await self._repo.remove_extra(set(engine_ids))
         await self._repo.release_syncing_lock(cmd.lock_token)
