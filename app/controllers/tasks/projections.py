@@ -11,10 +11,12 @@ from app.services.projections.engine import EngineProjectionService
 @as_task
 @shared_task()
 def sync_all_projections_task(lock_token: str):
-    runtime = get_runtime()
-    runtime.run(sync_all_projections(lock_token))
+    get_runtime().run(sync_all_projections(lock_token))
 
 
 @inject
-async def sync_all_projections(lock_token: str, svc: EngineProjectionService = Provide[Container.projection_service]):
+async def sync_all_projections(
+    lock_token: str,
+    svc: EngineProjectionService = Provide[Container.projection_service],
+):
     await svc.sync_all_projections(SyncAllProjectionsCmd(lock_token=lock_token))

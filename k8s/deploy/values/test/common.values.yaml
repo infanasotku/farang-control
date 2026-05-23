@@ -3,3 +3,4 @@ container:
 
 config:
   ENV: test
+  REDIS__CLIENT: control-test
