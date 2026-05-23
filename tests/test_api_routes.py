@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from dependency_injector import providers
@@ -35,11 +36,17 @@ def spec_service() -> MagicMock:
     return svc
 
 
+@asynccontextmanager
+async def redis_context():
+    yield MagicMock()
+
+
 @fixture()
 def client(engine_service: MagicMock, state_service: MagicMock, spec_service: MagicMock):
     Container.engine_service.override(providers.Object(engine_service))
     Container.state_service.override(providers.Object(state_service))
     Container.spec_service.override(providers.Object(spec_service))
+    Container.redis.override(providers.Resource(redis_context))
 
     app = create_app()
     app.dependency_overrides[authenticate] = lambda: None
@@ -51,6 +58,7 @@ def client(engine_service: MagicMock, state_service: MagicMock, spec_service: Ma
     Container.engine_service.reset_override()
     Container.state_service.reset_override()
     Container.spec_service.reset_override()
+    Container.redis.reset_override()
 
 
 class TestGetEngineSpecRoute:
