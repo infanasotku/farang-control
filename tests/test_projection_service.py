@@ -20,6 +20,7 @@ def repo() -> MagicMock:
     repo.upsert = AsyncMock()
     repo.delete = AsyncMock()
     repo.try_lock_syncing = AsyncMock(return_value=None)
+    repo.remove_extra = AsyncMock()
     repo.release_syncing_lock = AsyncMock()
     return repo
 
@@ -282,6 +283,7 @@ class TestSyncAllProjections(ProjectionServiceDeps):
         assert uow.begin.call_args_list == [call(write=False)]
         projection_ctx.engines.get_engine_ids.assert_awaited_once_with()
         assert sync_engine.await_args_list == [call(engine_id, ctx=projection_ctx) for engine_id in engine_ids]
+        repo.remove_extra.assert_awaited_once_with(set(engine_ids))
         repo.release_syncing_lock.assert_awaited_once_with("lock-token")
 
     @pytest.mark.asyncio
@@ -296,6 +298,7 @@ class TestSyncAllProjections(ProjectionServiceDeps):
         assert uow.begin.call_args_list == [call(write=False)]
         projection_ctx.engines.get_engine_ids.assert_awaited_once_with()
         sync_engine.assert_not_awaited()
+        repo.remove_extra.assert_awaited_once_with(set())
         repo.release_syncing_lock.assert_awaited_once_with("lock-token")
 
     @pytest.mark.asyncio
@@ -316,4 +319,5 @@ class TestSyncAllProjections(ProjectionServiceDeps):
             call(*[(engine_id, projection_ctx) for engine_id in engine_ids[:10]]),
             call((engine_ids[10], projection_ctx)),
         ]
+        repo.remove_extra.assert_awaited_once_with(set(engine_ids))
         repo.release_syncing_lock.assert_awaited_once_with("lock-token")
