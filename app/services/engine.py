@@ -69,9 +69,6 @@ class EngineService:
             if removal_result.engine_to_remove is not None:
                 await ctx.engines.delete(engine_id)
             if removal_result.spec_to_remove is not None:
-                logger.info(
-                    f"Removing engine spec: engine_id={engine_id} generation={removal_result.spec_to_remove.generation}"
-                )
                 await remove_engine_spec(removal_result.spec_to_remove, ctx=ctx)
             else:
                 logger.info(f"Engine has no spec to remove: engine_id={engine_id}")

@@ -125,17 +125,27 @@ class EngineView(ModelView, model=EngineProjectionModel):
     async def get_object_for_details(
         self,
         request: Request,
-        svc: EngineProjectionService = Provide[Container.projection_service],
     ) -> Any:
         pk = UUID(request.path_params["pk"])
-        try:
-            projection = await svc.get_by_id(pk)
-        except EngineNotFoundError:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engine not found")
-        return EngineProjectionModel.from_projection(projection)
+        return await self._get_by_id(pk)
 
     async def get_object_for_edit(self, request: Request) -> Any:
         return await self.get_object_for_details(request)
+
+    async def get_object_for_delete(self, value: Any) -> Any:
+        return await self._get_by_id(UUID(value))
+
+    @inject
+    async def _get_by_id(
+        self,
+        projection_id: UUID,
+        svc: EngineProjectionService = Provide[Container.projection_service],
+    ) -> Any:
+        try:
+            projection = await svc.get_by_id(projection_id)
+        except EngineNotFoundError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engine not found")
+        return EngineProjectionModel.from_projection(projection)
 
     @inject
     async def list(
