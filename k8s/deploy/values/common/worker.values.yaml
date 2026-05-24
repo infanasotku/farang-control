@@ -17,7 +17,7 @@ livenessProbe:
     command:
       - sh
       - -c
-      - celery -A app.entrypoints.worker:app inspect ping -d celery@$HOSTNAME
+      - test -r /proc/1/cmdline && tr '\0' ' ' < /proc/1/cmdline | grep -q "celery.*worker"
   initialDelaySeconds: 10
   periodSeconds: 10
-  timeoutSeconds: 10
+  timeoutSeconds: 5
