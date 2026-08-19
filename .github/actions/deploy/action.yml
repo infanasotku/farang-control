@@ -1,15 +1,15 @@
 name: Deploy
-description: Deploy a microservice to the specified environment
+description: Deploy one Helmfile release
 inputs:
   service:
-    description: "Service to deploy (api, events, outbox)"
+    description: Helmfile service label
     required: true
   environment:
-    description: "Deployment environment (test, prod)"
+    description: Deployment environment
     required: true
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Deploy
       shell: bash
@@ -18,10 +18,8 @@ runs:
 
       run: |
         cd k8s
-
         helmfile -f helmfile.yaml.gotmpl \
-          --state-values-set tag=$TAG \
-          -e ${{ inputs.environment }} \
-          -l svc=${{ inputs.service }} \
-          --skip-refresh \
-          apply
+          --state-values-set tag="$TAG" \
+          -e "${{ inputs.environment }}" \
+          -l "svc=${{ inputs.service }}" \
+          --skip-refresh apply
