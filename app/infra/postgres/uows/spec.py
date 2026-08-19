@@ -2,11 +2,11 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
-from app.infra.database.repositories.engine import (
+from app.infra.postgres.repositories.engine import (
     PgEngineSpecRepository,
     PgEngineSpecWriteRepository,
 )
-from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
+from app.infra.postgres.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
 class EngineSpecReadContext(Protocol):

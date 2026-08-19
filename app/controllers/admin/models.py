@@ -3,7 +3,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.domains.state import InstancePhase, LivenessStatus, SyncStatus
 from app.dto.projections import DerivedProjection
-from app.infra.database.models.base import uuidpk
+from app.infra.postgres.models.base import uuidpk
 
 
 class Base(DeclarativeBase): ...

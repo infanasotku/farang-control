@@ -4,11 +4,11 @@ from app.contracts.uow import UnitOfWork
 from app.domains.engine import EngineSpec
 from app.domains.exceptions.engine import EngineSpecNotFoundError
 from app.dto.spec import UpdateSpecCmd
-from app.infra.database.uows import (
+from app.infra.logging.logger import get_logger
+from app.infra.postgres.uows import (
     EngineSpecReadContext,
     EngineWriteSpecContext,
 )
-from app.infra.logging.logger import get_logger
 from app.services.projections.engine import EngineProjectionService
 from app.services.shared.spec import upsert_engine_spec
 

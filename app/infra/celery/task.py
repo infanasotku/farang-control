@@ -1,7 +1,6 @@
-from celery import Task
-
 from app.infra.common.correlation import RequestContext, with_request_context
 from app.infra.logging import logger
+from celery import Task
 
 
 def as_task(func) -> Task:

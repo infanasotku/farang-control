@@ -2,9 +2,9 @@ from celery import shared_task
 from dependency_injector.wiring import Provide, inject
 
 from app.container import Container
-from app.controllers.tasks.runtime import get_runtime
-from app.controllers.tasks.task import as_task
 from app.dto.projections import SyncAllProjectionsCmd
+from app.infra.celery.runtime import get_runtime
+from app.infra.celery.task import as_task
 from app.services.projections.engine import EngineProjectionService
 
 

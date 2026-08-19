@@ -7,7 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.container import Container
-from app.infra.database.models.base import Base
+from app.infra.postgres.models.base import Base
 
 settings = Container().settings()
 config = context.config

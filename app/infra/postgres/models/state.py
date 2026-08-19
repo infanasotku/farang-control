@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domains.state import InstancePhase
-from app.infra.database.models.base import Base, intpk, uuidpk
+from app.infra.postgres.models.base import Base, intpk, uuidpk
 
 
 class EngineInstance(Base):

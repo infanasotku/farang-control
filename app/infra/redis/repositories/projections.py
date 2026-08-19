@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 from venv import logger
 
 from app.dto.projections import Projection, UpsertProjection
-from app.infra.cache.common import CELERY_KEY_PREFIX, KEY_PREFIX, as_awaitable, scan_keys_page
-from app.infra.cache.repositories.base import RedisRepository
+from app.infra.redis.common import CELERY_KEY_PREFIX, KEY_PREFIX, as_awaitable, scan_keys_page
+from app.infra.redis.repositories.base import RedisRepository
 
 PROJECTION_KEY = KEY_PREFIX + "projections"
 

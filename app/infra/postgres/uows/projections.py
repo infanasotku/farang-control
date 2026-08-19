@@ -2,9 +2,9 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
-from app.infra.database.repositories.engine import PgEngineRepository, PgEngineSpecRepository
-from app.infra.database.repositories.state import PgStateRepository
-from app.infra.database.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
+from app.infra.postgres.repositories.engine import PgEngineRepository, PgEngineSpecRepository
+from app.infra.postgres.repositories.state import PgStateRepository
+from app.infra.postgres.uows.base import PgReadUOWContext, PgUnitOfWork, PgWriteUOWContext
 
 
 class ProjectionReadContext(Protocol):

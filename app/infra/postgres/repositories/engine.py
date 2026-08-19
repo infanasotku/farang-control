@@ -4,10 +4,10 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.engine import Engine, EngineSpec
-from app.infra.database.models.engine import Engine as EngineModel
-from app.infra.database.models.engine import EngineSpec as EngineSpecModel
-from app.infra.database.repositories.base import PostgresRepository
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.models.engine import Engine as EngineModel
+from app.infra.postgres.models.engine import EngineSpec as EngineSpecModel
+from app.infra.postgres.repositories.base import PostgresRepository
 
 logger = get_logger().getChild(__name__)
 

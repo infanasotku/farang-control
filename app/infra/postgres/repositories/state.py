@@ -4,10 +4,10 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.state import EngineInstance, EngineRuntimeState
-from app.infra.database.models.state import EngineInstance as EngineInstanceModel
-from app.infra.database.models.state import EngineRuntimeState as EngineRuntimeStateModel
-from app.infra.database.repositories.base import PostgresRepository
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.models.state import EngineInstance as EngineInstanceModel
+from app.infra.postgres.models.state import EngineRuntimeState as EngineRuntimeStateModel
+from app.infra.postgres.repositories.base import PostgresRepository
 
 logger = get_logger().getChild(__name__)
 

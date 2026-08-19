@@ -1,6 +1,6 @@
 from app.domains.engine import EngineSpec
-from app.infra.database.uows import EngineWriteSpecContext
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.uows import EngineWriteSpecContext
 
 logger = get_logger().getChild(__name__)
 

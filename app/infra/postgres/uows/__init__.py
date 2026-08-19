@@ -1,11 +1,11 @@
-from app.infra.database.uows.base import PgUnitOfWork
-from app.infra.database.uows.engine import EngineReadContext, EngineWriteContext, PgEngineUnitOfWork
-from app.infra.database.uows.spec import (
+from app.infra.postgres.uows.base import PgUnitOfWork
+from app.infra.postgres.uows.engine import EngineReadContext, EngineWriteContext, PgEngineUnitOfWork
+from app.infra.postgres.uows.spec import (
     EngineSpecReadContext,
     EngineWriteSpecContext,
     PgEngineSpecUnitOfWork,
 )
-from app.infra.database.uows.state import PgStateUnitOfWork, StateReadContext, StateWriteContext
+from app.infra.postgres.uows.state import PgStateUnitOfWork, StateReadContext, StateWriteContext
 
 __all__ = [
     "PgUnitOfWork",

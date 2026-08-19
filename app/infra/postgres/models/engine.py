@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infra.database.models.base import Base, intpk, uuidpk
+from app.infra.postgres.models.base import Base, intpk, uuidpk
 
 
 class Engine(Base):

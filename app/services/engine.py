@@ -4,8 +4,8 @@ from app.contracts.uow import UnitOfWork
 from app.domains.engine import Engine
 from app.domains.exceptions.engine import EngineNotFoundError
 from app.domains.func import engine as engine_func
-from app.infra.database.uows import EngineReadContext, EngineWriteContext
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.uows import EngineReadContext, EngineWriteContext
 from app.services.projections.engine import EngineProjectionService
 from app.services.shared.spec import remove_engine_spec, upsert_engine_spec
 

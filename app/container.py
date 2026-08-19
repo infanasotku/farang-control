@@ -1,13 +1,13 @@
 from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.infra.cache import create_redis_context
-from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.config import generate_settings
-from app.infra.database import create_engine
-from app.infra.database.uows import PgEngineSpecUnitOfWork, PgEngineUnitOfWork
-from app.infra.database.uows.projections import PgProjectionUnitOfWork
-from app.infra.database.uows.state import PgStateUnitOfWork
+from app.infra.postgres import create_engine
+from app.infra.postgres.uows import PgEngineSpecUnitOfWork, PgEngineUnitOfWork
+from app.infra.postgres.uows.projections import PgProjectionUnitOfWork
+from app.infra.postgres.uows.state import PgStateUnitOfWork
+from app.infra.redis import create_redis_context
+from app.infra.redis.repositories.projections import RedisEngineProjectionRepository
 from app.services.engine import EngineService
 from app.services.projections.engine import EngineProjectionService
 from app.services.spec import SpecService

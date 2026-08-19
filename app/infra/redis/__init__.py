@@ -1,10 +1,9 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from redis.asyncio import ConnectionPool, Redis
-
 from app.infra.config.redis import RedisSettings
 from app.infra.logging.logger import get_logger
+from redis.asyncio import ConnectionPool, Redis
 
 logger = get_logger().getChild(__name__)
 

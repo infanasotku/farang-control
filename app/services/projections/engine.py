@@ -10,10 +10,10 @@ from app.dto.projections import (
     SyncAllProjectionsCmd,
     UpsertProjection,
 )
-from app.infra.cache.repositories.projections import RedisEngineProjectionRepository
 from app.infra.common.time import now_utc
-from app.infra.database.uows.projections import ProjectionReadContext, ProjectionWriteContext
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.uows.projections import ProjectionReadContext, ProjectionWriteContext
+from app.infra.redis.repositories.projections import RedisEngineProjectionRepository
 
 logger = get_logger().getChild(__name__)
 
