@@ -8,7 +8,14 @@ from wtforms.widgets import TextArea
 class LargeTextAreaWidget(TextArea):
     def __call__(self, field, **kwargs):
         kwargs.setdefault("rows", 24)
-        kwargs.setdefault("style", "font-family: monospace;")
+        kwargs.setdefault("spellcheck", "false")
+        kwargs.setdefault("autocomplete", "off")
+        kwargs.setdefault("data-json-editor", "true")
+        kwargs.setdefault(
+            "style",
+            "font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; "
+            "min-height: 32rem; resize: vertical; tab-size: 2; white-space: pre;",
+        )
         return super().__call__(field, **kwargs)
 
 
@@ -29,3 +36,6 @@ class PrettyJSONField(JSONField):
 
 class AdminModelView(ModelView):
     can_export = False
+    create_template = "admin/create.html"
+    details_template = "admin/details.html"
+    edit_template = "admin/edit.html"

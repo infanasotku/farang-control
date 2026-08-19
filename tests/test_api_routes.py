@@ -61,6 +61,15 @@ def client(engine_service: MagicMock, state_service: MagicMock, spec_service: Ma
     Container.redis.reset_override()
 
 
+class TestAdminAssets:
+    def test_serves_json_editor(self, client: TestClient):
+        response = client.get("/admin-assets/json-editor.js")
+
+        assert response.status_code == 200
+        assert "CodeMirror.fromTextArea" in response.text
+        assert response.headers["content-type"].startswith("text/javascript")
+
+
 class TestGetEngineSpecRoute:
     def test_returns_spec_when_found(self, client: TestClient, spec_service: MagicMock):
         engine_id = uuid4()

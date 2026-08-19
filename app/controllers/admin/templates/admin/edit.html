@@ -1,0 +1,13 @@
+{% extends "sqladmin/edit.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('admin-assets', path='codemirror/lib/codemirror.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin-assets', path='codemirror/addon/fold/foldgutter.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin-assets', path='json-editor.css') }}">
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+{% include "admin/json-editor-scripts.html" %}
+{% endblock %}

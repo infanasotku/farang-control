@@ -1,0 +1,93 @@
+.json-editor-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.json-editor-status {
+  margin-left: auto;
+}
+
+.json-editor-status[data-state="valid"] {
+  color: var(--tblr-success);
+}
+
+.json-editor-status[data-state="invalid"] {
+  color: var(--tblr-danger);
+}
+
+.CodeMirror[data-json-code-editor="true"] {
+  border: 1px solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  height: 32rem;
+  line-height: 1.5;
+}
+
+.CodeMirror-focused[data-json-code-editor="true"] {
+  border-color: var(--tblr-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--tblr-primary-rgb), 0.1);
+}
+
+.json-viewer {
+  max-width: min(72rem, 80vw);
+  min-width: 32rem;
+}
+
+.json-viewer-summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.json-viewer-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.json-viewer-surface {
+  background: #fff;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius);
+  max-height: 42rem;
+  overflow: auto;
+}
+
+.json-viewer-surface .highlight,
+.json-viewer-surface .highlighttable,
+.json-viewer-surface pre {
+  background: #fff;
+  margin: 0;
+}
+
+.json-viewer-surface .highlighttable {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.json-viewer-surface pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5 !important;
+  padding: 0.25rem 0;
+}
+
+.json-viewer-surface td.code pre {
+  color: #000;
+}
+
+.json-viewer-surface td.linenos {
+  background: #f7f7f7;
+  border-right: 1px solid #ddd;
+  color: #999;
+  white-space: nowrap;
+  width: 1%;
+  user-select: none;
+}
+
+.json-viewer-surface td.code {
+  padding-left: 0.25rem;
+}

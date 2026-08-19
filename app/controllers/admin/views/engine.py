@@ -1,15 +1,15 @@
-import json
 from typing import Any
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import HTTPException, Request, status
-from markupsafe import Markup, escape
+from markupsafe import Markup
 from sqladmin.pagination import Pagination
 
 from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
 from app.controllers.admin.views.base import AdminModelView, PrettyJSONField
+from app.controllers.admin.views.json import render_json
 from app.controllers.admin.views.mixins import SyncProjectionsMixin
 from app.domains.exceptions.engine import EngineNotFoundError
 from app.dto.spec import UpdateSpecCmd
@@ -46,8 +46,8 @@ class EngineView(SyncProjectionsMixin, AdminModelView, model=EngineProjectionMod
     }
 
     @staticmethod
-    def format_config(model: EngineProjectionModel, _: str) -> str:
-        return Markup(f'<div style="white-space: pre-wrap;">{escape(json.dumps(model.config, indent=2))}</div>')
+    def format_config(model: EngineProjectionModel, _: str) -> Markup:
+        return render_json(model.config)
 
     column_formatters = {
         "config": lambda *_: "<COLLAPSED>",
