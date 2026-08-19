@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   build:
@@ -61,30 +60,20 @@ jobs:
           service: migration
           environment: prod
 
-  api:
-    name: Deploy api prod
+  deploy:
+    name: Deploy ${{ matrix.service }} prod
     runs-on: [self-hosted, helmfile]
     needs: [migrate]
     environment: stable
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, worker]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy api prod
+      - name: Deploy ${{ matrix.service }} prod
         uses: ./.github/actions/deploy
         with:
-          service: api
-          environment: prod
-
-  worker:
-    name: Deploy worker prod
-    runs-on: [self-hosted, helmfile]
-    needs: [migrate]
-    environment: stable
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy worker prod
-        uses: ./.github/actions/deploy
-        with:
-          service: worker
+          service: ${{ matrix.service }}
           environment: prod

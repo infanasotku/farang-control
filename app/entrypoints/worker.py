@@ -1,10 +1,10 @@
 from celery import Celery, signals
 
 from app.container import Container
-from app.controllers.tasks.runtime import create_runtime, stop_runtime
-from app.controllers.tasks.task import BaseTask
-from app.infra.cache.common import KEY_PREFIX
+from app.infra.celery.runtime import create_runtime, stop_runtime
+from app.infra.celery.task import BaseTask
 from app.infra.logging import create_logger, logger
+from app.infra.redis.common import KEY_PREFIX
 
 create_logger(with_process_name=True)
 

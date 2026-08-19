@@ -1,10 +1,11 @@
 name: PR CI
 on:
   pull_request:
-    branches:
-      - main
-      - test
-    types: [synchronize, opened]
+    branches: [main, test]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
 
 jobs:
   lint:
@@ -17,16 +18,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Install dev dependencies
-        working-directory: .
-        run: |
-          python -m pip install --upgrade pip
-          pip install --no-cache-dir -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
       - name: Run Ruff
-        working-directory: .
         run: |
-          ruff check .
-          ruff format --check .
+          python -m ruff check .
+          python -m ruff format --check .
 
   docker:
     name: Build with docker
@@ -37,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build docker image
-        run: docker build -f "Dockerfile" .
+        run: docker build -f Dockerfile .
 
   test:
     name: Test
@@ -50,12 +51,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Install dev dependencies
-        working-directory: .
-        run: |
-          python -m pip install --upgrade pip
-          pip install --no-cache-dir -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
       - name: Run pytest
-        working-directory: .
-        run: |
-          python -m pytest -v
+        run: ENV=ci python -m pytest -v

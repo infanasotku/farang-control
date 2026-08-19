@@ -6,8 +6,8 @@ from app.domains.func.heartbeat import apply_heartbeat
 from app.domains.func.registration import decide_registration
 from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
-from app.infra.database.uows.state import StateReadContext, StateWriteContext
 from app.infra.logging.logger import get_logger
+from app.infra.postgres.uows.state import StateReadContext, StateWriteContext
 from app.services.projections.engine import EngineProjectionService
 
 logger = get_logger().getChild(__name__)
