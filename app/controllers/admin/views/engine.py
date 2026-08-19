@@ -4,20 +4,16 @@ from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import HTTPException, Request, status
-from fastapi.responses import RedirectResponse
 from markupsafe import Markup, escape
-from sqladmin import ModelView, action
-from sqladmin.fields import JSONField
 from sqladmin.pagination import Pagination
-from wtforms.widgets import TextArea
 
 from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
+from app.controllers.admin.views.base import AdminModelView, PrettyJSONField
+from app.controllers.admin.views.mixins import SyncProjectionsMixin
 from app.domains.exceptions.engine import EngineNotFoundError
-from app.dto.projections import StartSyncAllProjectionsCmd
 from app.dto.spec import UpdateSpecCmd
-from app.infra.common.correlation import get_request_context
-from app.infra.logging.logger import get_logger
+from app.infra.logging import get_logger
 from app.services.engine import EngineService
 from app.services.projections.engine import EngineProjectionService
 from app.services.spec import SpecService
@@ -25,33 +21,9 @@ from app.services.spec import SpecService
 logger = get_logger().getChild(__name__)
 
 
-class LargeTextAreaWidget(TextArea):
-    def __call__(self, field, **kwargs):
-        kwargs.setdefault("rows", 24)
-        kwargs.setdefault("style", "font-family: monospace;")
-        return super().__call__(field, **kwargs)
-
-
-class ConfigJSONField(JSONField):
-    widget = LargeTextAreaWidget()
-
-    def _value(self) -> str:
-        data = {}
-
-        if self.raw_data:
-            data = json.loads(self.raw_data[0])
-
-        if self.data:
-            data = self.data
-
-        return json.dumps(data, ensure_ascii=False, indent=2)
-
-
-class EngineView(ModelView, model=EngineProjectionModel):
+class EngineView(SyncProjectionsMixin, AdminModelView, model=EngineProjectionModel):
     name = "Engine"
     name_plural = "Engines"
-
-    can_export = False
 
     column_list = [
         EngineProjectionModel.engine_id,
@@ -70,12 +42,12 @@ class EngineView(ModelView, model=EngineProjectionModel):
         EngineProjectionModel.liveness,
     ]
     form_overrides = {
-        "config": ConfigJSONField,
+        "config": PrettyJSONField,
     }
 
     @staticmethod
-    def format_config(m, _) -> str:
-        return Markup(f'<div style="white-space: pre-wrap;">{escape(json.dumps(m.config, indent=2))}</div>')
+    def format_config(model: EngineProjectionModel, _: str) -> str:
+        return Markup(f'<div style="white-space: pre-wrap;">{escape(json.dumps(model.config, indent=2))}</div>')
 
     column_formatters = {
         "config": lambda *_: "<COLLAPSED>",
@@ -121,13 +93,8 @@ class EngineView(ModelView, model=EngineProjectionModel):
         logger.info(f"Admin deleting engine: engine_id={pk}")
         return await svc.remove_engine(UUID(pk))
 
-    @inject
-    async def get_object_for_details(
-        self,
-        request: Request,
-    ) -> Any:
-        pk = UUID(request.path_params["pk"])
-        return await self._get_by_id(pk)
+    async def get_object_for_details(self, request: Request) -> Any:
+        return await self._get_by_id(UUID(request.path_params["pk"]))
 
     async def get_object_for_edit(self, request: Request) -> Any:
         return await self.get_object_for_details(request)
@@ -158,39 +125,11 @@ class EngineView(ModelView, model=EngineProjectionModel):
         page_size = min(page_size or self.page_size, max(self.page_size_options))
 
         projections = await svc.get(offset=(page - 1) * page_size, limit=page_size)
-        count = len(projections)
+        rows = [EngineProjectionModel.from_projection(projection) for projection in projections]
 
-        rows = [EngineProjectionModel.from_projection(p) for p in projections]
-
-        pagination = Pagination(
+        return Pagination(
             rows=rows,
             page=page,
             page_size=page_size,
-            count=count,
+            count=len(projections),
         )
-
-        return pagination
-
-    @action(
-        name="sync_projections",
-        label="Sync Projections",
-        confirmation_message=(
-            "Are you sure you want to sync all engine projections? "
-            "This will update the status of all engines based on their actual state."
-        ),
-        add_in_detail=False,
-        add_in_list=True,
-    )
-    @inject
-    async def start_syncing_all_projections(
-        self,
-        request: Request,
-        svc: EngineProjectionService = Provide[Container.projection_service],
-    ):
-        logger.info("Admin syncing all engines")
-
-        ctx = get_request_context()
-        cmd = StartSyncAllProjectionsCmd(correlation_id=ctx.request_id)
-        await svc.start_sync_all_projections(cmd)
-
-        return RedirectResponse(request.url_for("admin:list", identity=self.identity))

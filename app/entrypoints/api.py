@@ -17,11 +17,11 @@ def create_app() -> FastAPI:
     container = Container()
     container.wire(
         packages=[
+            "app.controllers.admin.views",
             "app.controllers.api.routes",
             "app.controllers.api.utils",
         ],
         modules=[
-            "app.controllers.admin.views",
             "app.controllers.admin.main",
         ],
     )
