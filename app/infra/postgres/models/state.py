@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, LargeBinary, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domains.state import InstancePhase
@@ -36,3 +36,5 @@ class EngineRuntimeState(Base):
     current_instance_id: Mapped[UUID] = mapped_column(ForeignKey("engine_instances.id"), nullable=False)
     current_epoch: Mapped[int] = mapped_column(nullable=False)
     last_seq_no: Mapped[int] = mapped_column(nullable=False)
+    replacement_permit_digest: Mapped[bytes | None] = mapped_column(LargeBinary(32), nullable=True)
+    replacement_permit_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

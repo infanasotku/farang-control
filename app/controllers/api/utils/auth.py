@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from typing import Annotated
 
 from dependency_injector.wiring import Provide, inject
@@ -16,6 +17,13 @@ api_key_scheme = APIKeyHeader(
     description="Service API key",
 )
 
+operator_api_key_scheme = APIKeyHeader(
+    name="X-Operator-Key",
+    scheme_name="OperatorApiKeyAuth",
+    description="Operator API key",
+    auto_error=False,
+)
+
 
 @inject
 async def authenticate(
@@ -30,7 +38,7 @@ async def authenticate(
             detail="API key is missing",
         )
 
-    if api_key != settings.edge_api_key:
+    if not compare_digest(api_key, settings.edge_api_key):
         logger.warning("API authentication failed: invalid API key")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -38,3 +46,36 @@ async def authenticate(
         )
 
     logger.info("API authentication succeeded")
+
+
+@inject
+async def authenticate_operator(
+    _: Request,
+    api_key: Annotated[str | None, Security(operator_api_key_scheme)],
+    settings: Annotated[AuthSettings, Depends(Provide[Container.auth_settings])],
+):
+    validate_operator_api_key(api_key, settings)
+    logger.info("Operator API authentication succeeded")
+
+
+def validate_operator_api_key(api_key: str | None, settings: AuthSettings) -> None:
+    if not settings.operator_api_key:
+        logger.error("Operator API authentication is not configured")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Operator API is not configured",
+        )
+
+    if not api_key:
+        logger.warning("Operator API authentication failed: missing API key")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Operator API key is missing",
+        )
+
+    if not compare_digest(api_key, settings.operator_api_key):
+        logger.warning("Operator API authentication failed: invalid API key")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid operator API key",
+        )

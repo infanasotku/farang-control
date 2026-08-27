@@ -21,6 +21,7 @@ def decide_registration(
     requested_instance_id: UUID,
     current_state: EngineRuntimeState | None,
     existing_instance: EngineInstance | None,
+    replacement_permit_digest: bytes | None = None,
 ) -> RegistrationResult:
     """
     Raises:
@@ -40,7 +41,11 @@ def decide_registration(
 
         raise InstanceDeprecatedError(requested_instance_id)
 
-    if current_state is not None and current_state.get_liveness(now) != LivenessStatus.DEAD:
+    if (
+        current_state is not None
+        and current_state.get_liveness(now) != LivenessStatus.DEAD
+        and not current_state.accepts_replacement_permit(now=now, digest=replacement_permit_digest)
+    ):
         raise CurrentInstanceAliveError(current_state.current_instance_id)
 
     epoch = 1 if current_state is None else current_state.current_epoch + 1

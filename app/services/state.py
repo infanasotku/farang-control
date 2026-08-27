@@ -1,16 +1,27 @@
+import secrets
+from datetime import timedelta
+from hashlib import sha256
 from uuid import UUID
 
 from app.contracts.uow import UnitOfWork
 from app.domains.exceptions.engine import EngineNotFoundError
+from app.domains.exceptions.state import EngineHasNoRuntimeStateError
 from app.domains.func.heartbeat import apply_heartbeat
 from app.domains.func.registration import decide_registration
-from app.dto.state import ApplyHeartbeatCmd
+from app.dto.state import ApplyHeartbeatCmd, ReplacementPermit
 from app.infra.common.time import now_utc
 from app.infra.logging.logger import get_logger
 from app.infra.postgres.uows.state import StateReadContext, StateWriteContext
 from app.services.projections.engine import EngineProjectionService
 
 logger = get_logger().getChild(__name__)
+
+REPLACEMENT_PERMIT_TTL = timedelta(minutes=10)
+REPLACEMENT_PERMIT_RANDOM_BYTES = 32
+
+
+def digest_replacement_permit(permit: str) -> bytes:
+    return sha256(permit.encode()).digest()
 
 
 class StateService:
@@ -20,7 +31,13 @@ class StateService:
         self._uow = uow
         self._projection = projection
 
-    async def register_instance(self, *, instance_id: UUID, engine_id: UUID) -> int:
+    async def register_instance(
+        self,
+        *,
+        instance_id: UUID,
+        engine_id: UUID,
+        replacement_permit: str | None = None,
+    ) -> int:
         """
         Register an engine instance in an idempotent manner and return the assigned epoch.
 
@@ -50,6 +67,9 @@ class StateService:
                 requested_instance_id=instance_id,
                 current_state=state,
                 existing_instance=instance,
+                replacement_permit_digest=(
+                    digest_replacement_permit(replacement_permit) if replacement_permit is not None else None
+                ),
             )
 
             if result.new_instance is not None:
@@ -74,6 +94,60 @@ class StateService:
 
         logger.info(f"Register instance finished: engine_id={engine_id} instance_id={instance_id} epoch={result.epoch}")
         return result.epoch
+
+    async def issue_replacement_permit(self, *, engine_id: UUID) -> ReplacementPermit:
+        logger.info(f"Issuing replacement permit: engine_id={engine_id}")
+        async with self._uow.begin(write=True) as ctx:
+            engine = await ctx.engines.get_engine_for_update(engine_id)
+            if engine is None:
+                logger.warning(f"Issue replacement permit failed because engine was not found: engine_id={engine_id}")
+                raise EngineNotFoundError(engine_id)
+
+            state = await ctx.states.get_engine_state_for_update(engine_id)
+            if state is None:
+                logger.warning(
+                    f"Issue replacement permit failed because engine has no runtime owner: engine_id={engine_id}"
+                )
+                raise EngineHasNoRuntimeStateError(engine_id)
+
+            now = now_utc()
+            permit = secrets.token_urlsafe(REPLACEMENT_PERMIT_RANDOM_BYTES)
+            expires_at = now + REPLACEMENT_PERMIT_TTL
+            state.issue_replacement_permit(
+                digest=digest_replacement_permit(permit),
+                expires_at=expires_at,
+            )
+            await ctx.states.upsert_engine_state(state)
+
+        logger.info(
+            f"Replacement permit issued: engine_id={engine_id} current_instance_id={state.current_instance_id} expires_at={expires_at.isoformat()}"
+        )
+        return ReplacementPermit(
+            engine_id=engine_id,
+            current_instance_id=state.current_instance_id,
+            permit=permit,
+            expires_at=expires_at,
+        )
+
+    async def revoke_replacement_permit(self, *, engine_id: UUID) -> None:
+        logger.info(f"Revoking replacement permit: engine_id={engine_id}")
+        async with self._uow.begin(write=True) as ctx:
+            engine = await ctx.engines.get_engine_for_update(engine_id)
+            if engine is None:
+                logger.warning(f"Revoke replacement permit failed because engine was not found: engine_id={engine_id}")
+                raise EngineNotFoundError(engine_id)
+
+            state = await ctx.states.get_engine_state_for_update(engine_id)
+            if state is None:
+                logger.warning(
+                    f"Revoke replacement permit failed because engine has no runtime owner: engine_id={engine_id}"
+                )
+                raise EngineHasNoRuntimeStateError(engine_id)
+
+            state.revoke_replacement_permit()
+            await ctx.states.upsert_engine_state(state)
+
+        logger.info(f"Replacement permit revoked: engine_id={engine_id}")
 
     async def apply_heartbeat(self, cmd: ApplyHeartbeatCmd):
         """

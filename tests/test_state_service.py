@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -6,10 +6,15 @@ from mock import AsyncMock, MagicMock, patch
 from pytest import fixture
 
 from app.domains.exceptions.engine import EngineNotFoundError
-from app.domains.exceptions.state import CurrentInstanceAliveError, InstanceDeprecatedError, InstanceNotRegisteredError
+from app.domains.exceptions.state import (
+    CurrentInstanceAliveError,
+    EngineHasNoRuntimeStateError,
+    InstanceDeprecatedError,
+    InstanceNotRegisteredError,
+)
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 from app.dto.state import ApplyHeartbeatCmd
-from app.services.state import StateService
+from app.services.state import REPLACEMENT_PERMIT_TTL, StateService, digest_replacement_permit
 
 
 @fixture()
@@ -139,6 +144,97 @@ class TestRegisterInstance(StateServiceDeps):
         self.projection.sync_engine.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_valid_replacement_permit_replaces_alive_instance(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        current_instance_id = uuid4()
+        requested_instance_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.RUNNING,
+            observed_generation=5,
+            last_seen_at=now,
+            last_seq_no=10,
+            current_instance_id=current_instance_id,
+            current_epoch=2,
+            replacement_permit_digest=digest_replacement_permit("one-time-permit"),
+            replacement_permit_expires_at=now + timedelta(minutes=1),
+        )
+
+        with patch("app.services.state.now_utc", return_value=now):
+            epoch = await self.svc.register_instance(
+                instance_id=requested_instance_id,
+                engine_id=engine_id,
+                replacement_permit="one-time-permit",
+            )
+
+        assert epoch == 3
+        created_state = state_ctx.states.upsert_engine_state.await_args.args[0]
+        assert created_state.current_instance_id == requested_instance_id
+        assert created_state.current_epoch == 3
+        assert created_state.replacement_permit_digest is None
+        assert created_state.replacement_permit_expires_at is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("permit", [None, "wrong-permit"])
+    async def test_missing_or_invalid_permit_cannot_replace_alive_instance(
+        self,
+        state_ctx: MagicMock,
+        permit: str | None,
+    ):
+        engine_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.RUNNING,
+            observed_generation=5,
+            last_seen_at=now,
+            last_seq_no=10,
+            current_instance_id=uuid4(),
+            current_epoch=2,
+            replacement_permit_digest=digest_replacement_permit("one-time-permit"),
+            replacement_permit_expires_at=now + timedelta(minutes=1),
+        )
+
+        with patch("app.services.state.now_utc", return_value=now):
+            with pytest.raises(CurrentInstanceAliveError):
+                await self.svc.register_instance(
+                    instance_id=uuid4(),
+                    engine_id=engine_id,
+                    replacement_permit=permit,
+                )
+
+        state_ctx.instances.create.assert_not_awaited()
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_expired_permit_cannot_replace_alive_instance(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        now = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        state_ctx.states.get_engine_state_for_update.return_value = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.RUNNING,
+            observed_generation=5,
+            last_seen_at=now,
+            last_seq_no=10,
+            current_instance_id=uuid4(),
+            current_epoch=2,
+            replacement_permit_digest=digest_replacement_permit("one-time-permit"),
+            replacement_permit_expires_at=now,
+        )
+
+        with patch("app.services.state.now_utc", return_value=now):
+            with pytest.raises(CurrentInstanceAliveError):
+                await self.svc.register_instance(
+                    instance_id=uuid4(),
+                    engine_id=engine_id,
+                    replacement_permit="one-time-permit",
+                )
+
+        state_ctx.instances.create.assert_not_awaited()
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_first_registration_creates_instance_and_runtime_state(self, state_ctx: MagicMock):
         engine_id = uuid4()
         instance_id = uuid4()
@@ -249,6 +345,82 @@ class TestRegisterInstance(StateServiceDeps):
         state_ctx.instances.create.assert_not_awaited()
         state_ctx.states.upsert_engine_state.assert_not_awaited()
         self.projection.sync_engine.assert_not_awaited()
+
+
+class TestReplacementPermit(StateServiceDeps):
+    @pytest.mark.asyncio
+    async def test_issue_stores_digest_and_returns_secret_once(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        current_instance_id = uuid4()
+        now = datetime(2026, 8, 27, tzinfo=timezone.utc)
+        state = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.RUNNING,
+            observed_generation=5,
+            last_seen_at=now,
+            last_seq_no=10,
+            current_instance_id=current_instance_id,
+            current_epoch=2,
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = state
+
+        with (
+            patch("app.services.state.now_utc", return_value=now),
+            patch("app.services.state.secrets.token_urlsafe", return_value="one-time-permit"),
+        ):
+            result = await self.svc.issue_replacement_permit(engine_id=engine_id)
+
+        assert result.engine_id == engine_id
+        assert result.current_instance_id == current_instance_id
+        assert result.permit == "one-time-permit"
+        assert result.expires_at == now + REPLACEMENT_PERMIT_TTL
+        assert state.replacement_permit_digest == digest_replacement_permit("one-time-permit")
+        assert state.replacement_permit_digest != b"one-time-permit"
+        assert state.replacement_permit_expires_at == result.expires_at
+        state_ctx.states.upsert_engine_state.assert_awaited_once_with(state)
+        self.projection.sync_engine.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_issue_fails_when_engine_is_not_found(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        state_ctx.engines.get_engine_for_update.return_value = None
+
+        with pytest.raises(EngineNotFoundError):
+            await self.svc.issue_replacement_permit(engine_id=engine_id)
+
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_issue_fails_without_runtime_owner(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+
+        with pytest.raises(EngineHasNoRuntimeStateError):
+            await self.svc.issue_replacement_permit(engine_id=engine_id)
+
+        state_ctx.states.upsert_engine_state.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_revoke_clears_existing_permit(self, state_ctx: MagicMock):
+        engine_id = uuid4()
+        now = datetime(2026, 8, 27, tzinfo=timezone.utc)
+        state = EngineRuntimeState(
+            engine_id=engine_id,
+            reported_phase=InstancePhase.RUNNING,
+            observed_generation=5,
+            last_seen_at=now,
+            last_seq_no=10,
+            current_instance_id=uuid4(),
+            current_epoch=2,
+            replacement_permit_digest=digest_replacement_permit("one-time-permit"),
+            replacement_permit_expires_at=now + timedelta(minutes=1),
+        )
+        state_ctx.states.get_engine_state_for_update.return_value = state
+
+        await self.svc.revoke_replacement_permit(engine_id=engine_id)
+
+        assert state.replacement_permit_digest is None
+        assert state.replacement_permit_expires_at is None
+        state_ctx.states.upsert_engine_state.assert_awaited_once_with(state)
 
 
 class TestApplyHeartbeat(StateServiceDeps):

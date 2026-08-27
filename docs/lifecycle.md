@@ -24,6 +24,7 @@ interaction between the engine instance and the control-plane.
 Detailed documentation for each stage is provided in separate documents:
 
 - [Registration](registration.md)
+- [Planned Replacement](planned-replacement.md)
 - [Spec Polling](spec-polling.md)
 - [Heartbeat](heartbeat.md)
 - [Runtime State Update](TODO)

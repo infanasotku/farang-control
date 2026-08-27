@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, status
 
 from app.container import Container
 from app.controllers.api.schemas.engine import RegisterEngineInstanceResponse
@@ -28,18 +28,21 @@ async def register_engine_instance(
     instance_id: Annotated[UUID, Query(...)],
     engine_id: Annotated[UUID, Path(...)],
     svc: Annotated[StateService, Depends(Provide[Container.state_service])],
+    replacement_permit: Annotated[str | None, Header(alias="X-Replacement-Permit")] = None,
 ) -> RegisterEngineInstanceResponse:
     logger.info(f"Register instance requested: engine_id={engine_id} instance_id={instance_id}")
     try:
-        epoch = await svc.register_instance(instance_id=instance_id, engine_id=engine_id)
+        epoch = await svc.register_instance(
+            instance_id=instance_id,
+            engine_id=engine_id,
+            replacement_permit=replacement_permit,
+        )
     except InstanceDeprecatedError as e:
         logger.warning(f"Register instance rejected as deprecated: engine_id={engine_id} instance_id={instance_id}")
         raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(e))
     except CurrentInstanceAliveError as e:
         logger.warning(
-            f"Register instance rejected because current owner is alive: engine_id={engine_id} instance_id={instance_id}",
-            engine_id,
-            instance_id,
+            f"Register instance rejected because current owner is alive: engine_id={engine_id} instance_id={instance_id}"
         )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except EngineNotFoundError as e:
