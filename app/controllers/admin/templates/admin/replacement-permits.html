@@ -1,0 +1,81 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Replacement permits</h3>
+      <div class="ms-auto">
+        <a href="{{ url_for('admin:list', identity=model_view.identity) }}" class="btn btn-secondary">
+          Back to engines
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if permits %}
+      <div class="alert alert-warning" role="alert">
+        Copy these permits now. They are shown only on this page, expire at the displayed time, and each can be used
+        only once. Issuing another permit for the same engine invalidates the previous one.
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead>
+            <tr>
+              <th>Engine ID</th>
+              <th>Current instance ID</th>
+              <th>Expires at</th>
+              <th>Permit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for permit in permits %}
+            <tr>
+              <td><code>{{ permit.engine_id }}</code></td>
+              <td><code>{{ permit.current_instance_id }}</code></td>
+              <td class="text-nowrap">{{ permit.expires_at.isoformat() }}</td>
+              <td style="min-width: 28rem">
+                <div class="input-group">
+                  <input
+                    id="replacement-permit-{{ loop.index }}"
+                    class="form-control font-monospace"
+                    type="text"
+                    value="{{ permit.permit }}"
+                    readonly
+                    aria-label="Replacement permit for engine {{ permit.engine_id }}"
+                  >
+                  <button
+                    class="btn btn-outline-primary"
+                    type="button"
+                    data-replacement-permit-copy="replacement-permit-{{ loop.index }}"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if errors %}
+      <div class="alert alert-danger mt-3" role="alert">
+        <h4 class="alert-title">Some permits could not be issued</h4>
+        <ul class="mb-0">
+          {% for error in errors %}
+          <li><code>{{ error.engine_id }}</code>: {{ error.message }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+<script src="{{ url_for('admin-assets', path='replacement-permits.js') }}"></script>
+{% endblock %}

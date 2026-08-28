@@ -20,6 +20,7 @@ from app.domains.exceptions.state import (
 from app.domains.state import InstancePhase
 from app.dto.state import ReplacementPermit
 from app.entrypoints.api import create_app
+from app.infra.config import generate_settings
 
 
 @fixture()
@@ -78,6 +79,39 @@ class TestAdminAssets:
         assert response.status_code == 200
         assert "CodeMirror.fromTextArea" in response.text
         assert response.headers["content-type"].startswith("text/javascript")
+
+    def test_replacement_permit_action_renders_one_time_secret(
+        self,
+        client: TestClient,
+        state_service: MagicMock,
+    ):
+        settings = generate_settings()
+        engine_id = uuid4()
+        current_instance_id = uuid4()
+        state_service.issue_replacement_permit.return_value = ReplacementPermit(
+            engine_id=engine_id,
+            current_instance_id=current_instance_id,
+            permit="one-time-admin-secret",
+            expires_at=datetime(2026, 8, 28, 12, tzinfo=timezone.utc),
+        )
+        login_response = client.post(
+            "/admin/login",
+            data={
+                "username": settings.admin.username,
+                "password": settings.admin.password,
+            },
+            follow_redirects=False,
+        )
+
+        response = client.get(f"/admin/engine-projection/action/issue-replacement-permit?pks={engine_id}")
+
+        assert login_response.status_code == 302
+        assert response.status_code == 200
+        assert "one-time-admin-secret" in response.text
+        assert str(current_instance_id) in response.text
+        assert "Copy these permits now" in response.text
+        assert response.headers["cache-control"] == "no-store"
+        state_service.issue_replacement_permit.assert_awaited_once_with(engine_id=engine_id)
 
 
 class TestGetEngineSpecRoute:

@@ -10,7 +10,7 @@ from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
 from app.controllers.admin.views.base import AdminModelView, PrettyJSONField
 from app.controllers.admin.views.json import render_json
-from app.controllers.admin.views.mixins import SyncProjectionsMixin
+from app.controllers.admin.views.mixins import ReplacementPermitMixin, SyncProjectionsMixin
 from app.domains.exceptions.engine import EngineNotFoundError
 from app.dto.spec import UpdateSpecCmd
 from app.infra.logging import get_logger
@@ -21,7 +21,7 @@ from app.services.spec import SpecService
 logger = get_logger().getChild(__name__)
 
 
-class EngineView(SyncProjectionsMixin, AdminModelView, model=EngineProjectionModel):
+class EngineView(SyncProjectionsMixin, ReplacementPermitMixin, AdminModelView, model=EngineProjectionModel):
     name = "Engine"
     name_plural = "Engines"
 
