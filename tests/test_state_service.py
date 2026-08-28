@@ -14,7 +14,8 @@ from app.domains.exceptions.state import (
 )
 from app.domains.state import EngineInstance, EngineRuntimeState, InstancePhase
 from app.dto.state import ApplyHeartbeatCmd
-from app.services.state import REPLACEMENT_PERMIT_TTL, StateService, digest_replacement_permit
+from app.services.state import StateService
+from app.services.state.shared import REPLACEMENT_PERMIT_TTL, digest_replacement_permit
 
 
 @fixture()
@@ -132,7 +133,7 @@ class TestRegisterInstance(StateServiceDeps):
             current_epoch=2,
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             with pytest.raises(CurrentInstanceAliveError):
                 await self.svc.register_instance(
                     instance_id=uuid4(),
@@ -161,7 +162,7 @@ class TestRegisterInstance(StateServiceDeps):
             replacement_permit_expires_at=now + timedelta(minutes=1),
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             epoch = await self.svc.register_instance(
                 instance_id=requested_instance_id,
                 engine_id=engine_id,
@@ -196,7 +197,7 @@ class TestRegisterInstance(StateServiceDeps):
             replacement_permit_expires_at=now + timedelta(minutes=1),
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             with pytest.raises(CurrentInstanceAliveError):
                 await self.svc.register_instance(
                     instance_id=uuid4(),
@@ -223,7 +224,7 @@ class TestRegisterInstance(StateServiceDeps):
             replacement_permit_expires_at=now,
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             with pytest.raises(CurrentInstanceAliveError):
                 await self.svc.register_instance(
                     instance_id=uuid4(),
@@ -240,7 +241,7 @@ class TestRegisterInstance(StateServiceDeps):
         instance_id = uuid4()
         now = datetime(2026, 3, 15, tzinfo=timezone.utc)
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             epoch = await self.svc.register_instance(
                 instance_id=instance_id,
                 engine_id=engine_id,
@@ -283,7 +284,7 @@ class TestRegisterInstance(StateServiceDeps):
             current_epoch=7,
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.registration.now_utc", return_value=now):
             epoch = await self.svc.register_instance(
                 instance_id=instance_id,
                 engine_id=engine_id,
@@ -310,8 +311,8 @@ class TestRegisterInstance(StateServiceDeps):
         self.projection.sync_engine.side_effect = RuntimeError("projection failed")
 
         with (
-            patch("app.services.state.now_utc", return_value=now),
-            patch("app.services.state.logger.exception") as logger_exception,
+            patch("app.services.state.registration.now_utc", return_value=now),
+            patch("app.services.state.registration.logger.exception") as logger_exception,
         ):
             epoch = await self.svc.register_instance(
                 instance_id=instance_id,
@@ -365,8 +366,8 @@ class TestReplacementPermit(StateServiceDeps):
         state_ctx.states.get_engine_state_for_update.return_value = state
 
         with (
-            patch("app.services.state.now_utc", return_value=now),
-            patch("app.services.state.secrets.token_urlsafe", return_value="one-time-permit"),
+            patch("app.services.state.replacement.now_utc", return_value=now),
+            patch("app.services.state.replacement.secrets.token_urlsafe", return_value="one-time-permit"),
         ):
             result = await self.svc.issue_replacement_permit(engine_id=engine_id)
 
@@ -559,7 +560,7 @@ class TestApplyHeartbeat(StateServiceDeps):
             created_at=now,
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.heartbeat.now_utc", return_value=now):
             result = await self.svc.apply_heartbeat(cmd)
 
         assert result is None
@@ -597,7 +598,7 @@ class TestApplyHeartbeat(StateServiceDeps):
             created_at=previous_seen_at,
         )
 
-        with patch("app.services.state.now_utc", return_value=now):
+        with patch("app.services.state.heartbeat.now_utc", return_value=now):
             result = await self.svc.apply_heartbeat(cmd)
 
         assert result is None
@@ -641,8 +642,8 @@ class TestApplyHeartbeat(StateServiceDeps):
         )
 
         with (
-            patch("app.services.state.now_utc", return_value=now),
-            patch("app.services.state.logger.exception") as logger_exception,
+            patch("app.services.state.heartbeat.now_utc", return_value=now),
+            patch("app.services.state.heartbeat.logger.exception") as logger_exception,
         ):
             result = await self.svc.apply_heartbeat(cmd)
 
