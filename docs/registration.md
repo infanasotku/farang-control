@@ -14,6 +14,14 @@ It provides:
 POST /engines/{engine_id}/register-instance?instance_id=UUID
 ```
 
+For a deliberate replacement of a live instance, the request can also include:
+
+```text
+X-Replacement-Permit: ONE_TIME_SECRET
+```
+
+See [Planned Replacement](planned-replacement.md) for the operator workflow.
+
 Response:
 
 ```json
@@ -38,7 +46,8 @@ Registration runs in a single transaction.
 4. If the instance already exists:
    - if it is the current owner, return the existing `epoch`
    - otherwise raise `InstanceDeprecatedError`
-5. If a runtime snapshot exists and the current owner is not `DEAD`, raise `CurrentInstanceAliveError`.
+5. If a runtime snapshot exists and the current owner is not `DEAD`, require a valid, unexpired replacement permit;
+   otherwise raise `CurrentInstanceAliveError`.
 6. Compute `epoch = 1` for the first registration, otherwise `current_epoch + 1`.
 7. Insert a new row into `engine_instances`.
 8. Upsert `engine_runtime_state` with:
@@ -55,6 +64,7 @@ Registration runs in a single transaction.
 - Only one runtime owner is accepted at a time.
 - `epoch` is monotonic per engine.
 - Concurrent registrations are serialized by engine row locking.
+- A replacement permit is consumed when it installs a new runtime owner.
 
 # Example
 

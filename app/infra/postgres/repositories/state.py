@@ -22,6 +22,8 @@ def engine_runtime_state_from_model(model: EngineRuntimeStateModel) -> EngineRun
         #
         current_instance_id=model.current_instance_id,
         current_epoch=model.current_epoch,
+        replacement_permit_digest=model.replacement_permit_digest,
+        replacement_permit_expires_at=model.replacement_permit_expires_at,
     )
 
 
@@ -48,6 +50,8 @@ class PgStateWriteRepository(PgStateRepository):
                 current_instance_id=state.current_instance_id,
                 current_epoch=state.current_epoch,
                 last_seq_no=state.last_seq_no,
+                replacement_permit_digest=state.replacement_permit_digest,
+                replacement_permit_expires_at=state.replacement_permit_expires_at,
             )
             .on_conflict_do_update(
                 index_elements=[EngineRuntimeStateModel.engine_id],
@@ -58,6 +62,8 @@ class PgStateWriteRepository(PgStateRepository):
                     "current_instance_id": state.current_instance_id,
                     "current_epoch": state.current_epoch,
                     "last_seq_no": state.last_seq_no,
+                    "replacement_permit_digest": state.replacement_permit_digest,
+                    "replacement_permit_expires_at": state.replacement_permit_expires_at,
                 },
             )
         )

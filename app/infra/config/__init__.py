@@ -32,7 +32,7 @@ class TestSettings(Settings):
     postgres: PostgreSQLSettings = PostgreSQLSettings(
         dsn=PostgresDsn("postgresql+asyncpg://test_user:test_password@localhost:5432/test_db")
     )
-    auth: AuthSettings = AuthSettings(edge_api_key="test_key")
+    auth: AuthSettings = AuthSettings(edge_api_key="test_key", operator_api_key="test_operator_key")
     admin: AdminSettings = AdminSettings(username="admin", password="admin", secret="admin_secret")
     redis: RedisSettings = RedisSettings(dsn=RedisDsn("redis://localhost:6379/0"))
     rabbitmq: RabbitMQSettings = RabbitMQSettings(dsn=AmqpDsn("amqp://guest:guest@localhost:5672/"))

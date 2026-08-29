@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
+from hmac import compare_digest
 from uuid import UUID
 
 from app.domains.engine import EngineSpec
@@ -51,11 +52,29 @@ class EngineRuntimeState:
     current_instance_id: UUID
     current_epoch: int
 
+    replacement_permit_digest: bytes | None = None
+    replacement_permit_expires_at: datetime | None = None
+
     def get_liveness(self, now: datetime) -> LivenessStatus:
         return derive_liveness(now=now, last_seen_at=self.last_seen_at)
 
     def is_new_state(self, seq_no: int) -> bool:
         return seq_no > self.last_seq_no
+
+    def issue_replacement_permit(self, *, digest: bytes, expires_at: datetime) -> None:
+        self.replacement_permit_digest = digest
+        self.replacement_permit_expires_at = expires_at
+
+    def revoke_replacement_permit(self) -> None:
+        self.replacement_permit_digest = None
+        self.replacement_permit_expires_at = None
+
+    def accepts_replacement_permit(self, *, now: datetime, digest: bytes | None) -> bool:
+        if digest is None or self.replacement_permit_digest is None or self.replacement_permit_expires_at is None:
+            return False
+        if now >= self.replacement_permit_expires_at:
+            return False
+        return compare_digest(digest, self.replacement_permit_digest)
 
     @classmethod
     def initial(
@@ -74,6 +93,8 @@ class EngineRuntimeState:
             last_seq_no=0,
             current_instance_id=instance_id,
             current_epoch=epoch,
+            replacement_permit_digest=None,
+            replacement_permit_expires_at=None,
         )
 
     def apply_heartbeat(
