@@ -75,6 +75,13 @@ class RegisterInstanceUC:
                     f"Runtime state updated on registration: engine_id={engine_id} instance_id={instance_id} epoch={result.new_runtime_state.current_epoch}"
                 )
 
+        if result.replaced_live_instance_id is not None:
+            logger.warning(
+                f"Instance registered using replacement permit: engine_id={engine_id} "
+                f"previous_instance_id={result.replaced_live_instance_id} new_instance_id={instance_id} "
+                f"epoch={result.epoch}"
+            )
+
         if result.new_runtime_state is not None:
             try:
                 await self._projection.sync_engine(engine_id)

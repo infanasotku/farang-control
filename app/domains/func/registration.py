@@ -12,6 +12,7 @@ class RegistrationResult:
     epoch: int
     new_instance: EngineInstance | None
     new_runtime_state: EngineRuntimeState | None
+    replaced_live_instance_id: UUID | None
 
 
 def decide_registration(
@@ -37,16 +38,19 @@ def decide_registration(
                 epoch=current_state.current_epoch,
                 new_instance=None,
                 new_runtime_state=None,
+                replaced_live_instance_id=None,
             )
 
         raise InstanceDeprecatedError(requested_instance_id)
 
-    if (
-        current_state is not None
-        and current_state.get_liveness(now) != LivenessStatus.DEAD
-        and not current_state.accepts_replacement_permit(now=now, digest=replacement_permit_digest)
-    ):
-        raise CurrentInstanceAliveError(current_state.current_instance_id)
+    replaced_live_instance_id: UUID | None = None
+    if current_state is not None and current_state.get_liveness(now) != LivenessStatus.DEAD:
+        if not current_state.accepts_replacement_permit(
+            now=now,
+            digest=replacement_permit_digest,
+        ):
+            raise CurrentInstanceAliveError(current_state.current_instance_id)
+        replaced_live_instance_id = current_state.current_instance_id
 
     epoch = 1 if current_state is None else current_state.current_epoch + 1
 
@@ -67,4 +71,5 @@ def decide_registration(
         epoch=epoch,
         new_instance=instance,
         new_runtime_state=runtime_state,
+        replaced_live_instance_id=replaced_live_instance_id,
     )
