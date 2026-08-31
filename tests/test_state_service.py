@@ -162,7 +162,10 @@ class TestRegisterInstance(StateServiceDeps):
             replacement_permit_expires_at=now + timedelta(minutes=1),
         )
 
-        with patch("app.services.state.registration.now_utc", return_value=now):
+        with (
+            patch("app.services.state.registration.now_utc", return_value=now),
+            patch("app.services.state.registration.logger.warning") as logger_warning,
+        ):
             epoch = await self.svc.register_instance(
                 instance_id=requested_instance_id,
                 engine_id=engine_id,
@@ -175,6 +178,10 @@ class TestRegisterInstance(StateServiceDeps):
         assert created_state.current_epoch == 3
         assert created_state.replacement_permit_digest is None
         assert created_state.replacement_permit_expires_at is None
+        logger_warning.assert_called_once_with(
+            f"Instance registered using replacement permit: engine_id={engine_id} "
+            f"previous_instance_id={current_instance_id} new_instance_id={requested_instance_id} epoch=3"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("permit", [None, "wrong-permit"])
@@ -241,10 +248,14 @@ class TestRegisterInstance(StateServiceDeps):
         instance_id = uuid4()
         now = datetime(2026, 3, 15, tzinfo=timezone.utc)
 
-        with patch("app.services.state.registration.now_utc", return_value=now):
+        with (
+            patch("app.services.state.registration.now_utc", return_value=now),
+            patch("app.services.state.registration.logger.warning") as logger_warning,
+        ):
             epoch = await self.svc.register_instance(
                 instance_id=instance_id,
                 engine_id=engine_id,
+                replacement_permit="unnecessary-permit",
             )
 
         assert epoch == 1
@@ -266,6 +277,7 @@ class TestRegisterInstance(StateServiceDeps):
         assert created_state.last_seq_no == 0
         assert created_state.last_seen_at == now
         self.projection.sync_engine.assert_awaited_once_with(engine_id)
+        logger_warning.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_registration_after_dead_instance_creates_new_epoch(self, state_ctx: MagicMock):
