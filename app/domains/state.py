@@ -6,8 +6,8 @@ from uuid import UUID
 
 from app.domains.engine import EngineSpec
 
-STALE_THRESHOLD = timedelta(seconds=30)
-DEAD_THRESHOLD = timedelta(minutes=5)
+STALE_THRESHOLD = timedelta(seconds=10)
+DEAD_THRESHOLD = timedelta(seconds=30)
 
 
 class LivenessStatus(StrEnum):
