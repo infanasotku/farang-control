@@ -1,7 +1,7 @@
 # Planned Engine Replacement
 
 A replacement permit allows an operator to deliberately restart an edge and register its new instance immediately,
-without waiting for the current owner to cross the five-minute dead threshold.
+without waiting for the current owner to cross the 30-second dead threshold.
 
 The permit does not change the current owner's liveness. The old instance remains valid until the replacement registers,
 at which point the normal epoch fencing mechanism makes the old instance stale.
