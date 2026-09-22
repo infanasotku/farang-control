@@ -1,9 +1,4 @@
-{% extends "sqladmin/details.html" %}
-
-{% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('admin-assets', path='json-editor.css') }}">
-{% endblock %}
+{% extends "sqladmin/list.html" %}
 
 {% block content_header %}
 {{ super() }}

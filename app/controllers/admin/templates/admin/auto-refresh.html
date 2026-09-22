@@ -1,0 +1,14 @@
+<div data-auto-refresh hidden>
+  <div class="d-flex flex-wrap align-items-center gap-2 mt-2 d-print-none">
+    <label class="form-label mb-0" for="auto-refresh-interval">Refresh every</label>
+    <select id="auto-refresh-interval" class="form-select form-select-sm w-auto" data-auto-refresh-interval>
+      <option value="5">5s</option>
+      <option value="10">10s</option>
+      <option value="30" selected>30s</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-auto-refresh-toggle aria-pressed="false">
+      Pause auto-refresh
+    </button>
+    <span class="text-muted small" data-auto-refresh-status></span>
+  </div>
+</div>

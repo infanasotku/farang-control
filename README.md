@@ -16,3 +16,10 @@ PostgreSQL is the authoritative store for engines, desired specs, and runtime st
 The admin list and detail pages read these tables directly with outer joins, so
 engines without a spec or runtime report remain visible. Sync status and liveness
 are derived when read; listing uses stable name/ID ordering and a total engine count.
+
+The admin engine list and detail pages reload to show current status. Choose a
+5, 10, or 30 second interval (default: 30 seconds), or use **Pause auto-refresh**.
+Both settings survive navigation and reloads in the current browser tab.
+Refresh waits while the tab is hidden, rows or text are selected, a menu/dialog
+is open, or an input is focused or modified.
+Create/edit forms and one-time replacement-permit results never auto-refresh.
