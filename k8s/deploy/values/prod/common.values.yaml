@@ -3,4 +3,3 @@ container:
 
 config:
   ENV: prod
-  REDIS__CLIENT: control

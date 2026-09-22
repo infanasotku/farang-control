@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -18,6 +17,7 @@ from app.domains.exceptions.state import (
     InstanceNotRegisteredError,
 )
 from app.domains.state import InstancePhase
+from app.dto.engine_status import EngineStatus, EngineStatusPage
 from app.dto.state import ReplacementPermit
 from app.entrypoints.api import create_app
 from app.infra.config import generate_settings
@@ -26,6 +26,8 @@ from app.infra.config import generate_settings
 @fixture()
 def engine_service() -> MagicMock:
     svc = MagicMock()
+    svc.get_status = AsyncMock()
+    svc.get_statuses = AsyncMock(return_value=EngineStatusPage(items=[], total=0))
     return svc
 
 
@@ -46,17 +48,11 @@ def spec_service() -> MagicMock:
     return svc
 
 
-@asynccontextmanager
-async def redis_context():
-    yield MagicMock()
-
-
 @fixture()
 def client(engine_service: MagicMock, state_service: MagicMock, spec_service: MagicMock):
     Container.engine_service.override(providers.Object(engine_service))
     Container.state_service.override(providers.Object(state_service))
     Container.spec_service.override(providers.Object(spec_service))
-    Container.redis.override(providers.Resource(redis_context))
 
     app = create_app()
     app.dependency_overrides[authenticate] = lambda: None
@@ -69,10 +65,30 @@ def client(engine_service: MagicMock, state_service: MagicMock, spec_service: Ma
     Container.engine_service.reset_override()
     Container.state_service.reset_override()
     Container.spec_service.reset_override()
-    Container.redis.reset_override()
 
 
 class TestAdminAssets:
+    def test_engine_status_list_and_details_use_live_service(self, client: TestClient, engine_service: MagicMock):
+        settings = generate_settings()
+        client.post("/admin/login", data={"username": settings.admin.username, "password": settings.admin.password})
+        status = EngineStatus(engine_id=uuid4(), name="live-edge", config={"fresh": True}, enabled=True)
+        engine_service.get_statuses.return_value = EngineStatusPage(items=[status], total=31)
+        engine_service.get_status.return_value = status
+
+        response = client.get("/admin/engine-projection/list?page=2&pageSize=10")
+        assert response.status_code == 200
+        assert "live-edge" in response.text
+        assert "Sync Projections" not in response.text
+        engine_service.get_statuses.assert_awaited_once_with(offset=10, limit=10)
+
+        response = client.get(f"/admin/engine-projection/details/{status.engine_id}")
+        assert response.status_code == 200
+        assert "fresh" in response.text
+        engine_service.get_status.assert_awaited_once_with(status.engine_id)
+
+        engine_service.get_status.side_effect = EngineNotFoundError(status.engine_id)
+        assert client.get(f"/admin/engine-projection/details/{status.engine_id}").status_code == 404
+
     def test_serves_json_editor(self, client: TestClient):
         response = client.get("/admin-assets/json-editor.js")
 

@@ -23,3 +23,17 @@ runs:
           -e "${{ inputs.environment }}" \
           -l "svc=${{ inputs.service }}" \
           --skip-refresh apply
+
+    - name: Remove obsolete projection worker after API upgrade
+      if: inputs.service == 'api'
+      shell: bash
+      env:
+        DEPLOY_ENV: ${{ inputs.environment }}
+      run: |
+        case "$DEPLOY_ENV" in
+          prod) namespace=farang-control ;;
+          test) namespace=farang-control-test ;;
+          *) echo "Unknown deployment environment: $DEPLOY_ENV" >&2; exit 1 ;;
+        esac
+        helm --kube-context kubernetes-admin@kubernetes \
+          uninstall worker --namespace "$namespace" --ignore-not-found --wait --timeout 300s

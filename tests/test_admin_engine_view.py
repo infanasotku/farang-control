@@ -12,21 +12,37 @@ from starlette.datastructures import URL
 from app.controllers.admin.models import EngineProjection
 from app.controllers.admin.views import EngineView
 from app.controllers.admin.views.base import AdminModelView, LargeTextAreaWidget, PrettyJSONField
-from app.controllers.admin.views.mixins import ReplacementPermitMixin, SyncProjectionsMixin
+from app.controllers.admin.views.mixins import ReplacementPermitMixin
 from app.domains.exceptions.state import EngineHasNoRuntimeStateError
-from app.dto.projections import StartSyncAllProjectionsCmd
+from app.dto.engine_status import EngineStatus, EngineStatusPage
 from app.dto.state import ReplacementPermit
-from app.infra.common.correlation import RequestContext, with_request_context
 
 
 def test_engine_view_uses_shared_admin_components():
-    assert issubclass(EngineView, SyncProjectionsMixin)
     assert issubclass(EngineView, ReplacementPermitMixin)
     assert issubclass(EngineView, AdminModelView)
     assert EngineView.form_overrides["config"] is PrettyJSONField
     assert EngineView.create_template == "admin/create.html"
     assert EngineView.details_template == "admin/details.html"
     assert EngineView.edit_template == "admin/edit.html"
+
+
+@pytest.mark.asyncio
+async def test_engine_list_uses_total_count_for_pagination():
+    service = MagicMock()
+    service.get_statuses = AsyncMock(
+        return_value=EngineStatusPage(
+            items=[EngineStatus(engine_id=uuid4(), name="edge", config={}, enabled=False)],
+            total=31,
+        )
+    )
+    request = MagicMock()
+    request.query_params = {"page": "2", "pageSize": "10"}
+    result = await EngineView().list(request, svc=service)
+    assert len(result.rows) == 1
+    assert result.count == 31
+    assert result.has_next is True
+    assert result.has_previous is True
 
 
 def test_json_editor_uses_code_friendly_textarea():
@@ -98,23 +114,6 @@ def test_engine_view_formats_config_as_escaped_markup():
     assert 'style="background: #f0f0f0"' not in formatted
     assert "</textarea><script>" not in formatted
     assert "&lt;/textarea&gt;&lt;script&gt;" in formatted
-
-
-@pytest.mark.asyncio
-async def test_sync_action_starts_projection_sync_and_redirects_to_list():
-    view = EngineView()
-    start_projection_sync = AsyncMock()
-    cast(Any, view).start_projection_sync = start_projection_sync
-    request = MagicMock()
-    request.url_for.return_value = URL("http://testserver/admin/engine/list")
-
-    with with_request_context(RequestContext(request_id="request-id")):
-        response = await view.start_syncing_all_projections(request)
-
-    start_projection_sync.assert_awaited_once_with(StartSyncAllProjectionsCmd(correlation_id="request-id"))
-    request.url_for.assert_called_once_with("admin:list", identity="engine-projection")
-    assert response.status_code == 307
-    assert response.headers["location"] == "http://testserver/admin/engine/list"
 
 
 @pytest.mark.asyncio
