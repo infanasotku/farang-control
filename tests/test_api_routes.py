@@ -79,15 +79,38 @@ class TestAdminAssets:
         assert response.status_code == 200
         assert "live-edge" in response.text
         assert "Sync Projections" not in response.text
+        assert "auto-refresh.js" in response.text
+        assert "data-auto-refresh-interval" in response.text
+        assert '<option value="5">5s</option>' in response.text
+        assert '<option value="10">10s</option>' in response.text
+        assert '<option value="30" selected>30s</option>' in response.text
         engine_service.get_statuses.assert_awaited_once_with(offset=10, limit=10)
 
         response = client.get(f"/admin/engine-projection/details/{status.engine_id}")
         assert response.status_code == 200
         assert "fresh" in response.text
+        assert "auto-refresh.js" in response.text
         engine_service.get_status.assert_awaited_once_with(status.engine_id)
 
         engine_service.get_status.side_effect = EngineNotFoundError(status.engine_id)
         assert client.get(f"/admin/engine-projection/details/{status.engine_id}").status_code == 404
+
+    def test_auto_refresh_excludes_login_and_forms(self, client: TestClient, engine_service: MagicMock):
+        assert "auto-refresh.js" not in client.get("/admin/login").text
+        settings = generate_settings()
+        client.post("/admin/login", data={"username": settings.admin.username, "password": settings.admin.password})
+        status = EngineStatus(engine_id=uuid4(), name="edge", config={}, enabled=True)
+        engine_service.get_status.return_value = status
+        for path in ("create", f"edit/{status.engine_id}"):
+            response = client.get(f"/admin/engine-projection/{path}")
+            assert response.status_code == 200
+            assert "auto-refresh.js" not in response.text
+            assert "data-auto-refresh" not in response.text
+
+    def test_serves_auto_refresh_script(self, client: TestClient):
+        response = client.get("/admin-assets/auto-refresh.js")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/javascript")
 
     def test_serves_json_editor(self, client: TestClient):
         response = client.get("/admin-assets/json-editor.js")
@@ -126,6 +149,8 @@ class TestAdminAssets:
         assert "one-time-admin-secret" in response.text
         assert str(current_instance_id) in response.text
         assert "Copy these permits now" in response.text
+        assert "auto-refresh.js" not in response.text
+        assert "data-auto-refresh" not in response.text
         assert response.headers["cache-control"] == "no-store"
         state_service.issue_replacement_permit.assert_awaited_once_with(engine_id=engine_id)
 

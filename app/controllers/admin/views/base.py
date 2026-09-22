@@ -36,6 +36,7 @@ class PrettyJSONField(JSONField):
 
 class AdminModelView(ModelView):
     can_export = False
+    list_template = "admin/list.html"
     create_template = "admin/create.html"
     details_template = "admin/details.html"
     edit_template = "admin/edit.html"
