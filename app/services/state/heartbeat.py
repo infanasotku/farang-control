@@ -5,7 +5,6 @@ from app.dto.state import ApplyHeartbeatCmd
 from app.infra.common.time import now_utc
 from app.infra.logging.logger import get_logger
 from app.infra.postgres.uows.state import StateReadContext, StateWriteContext
-from app.services.projections.engine import EngineProjectionService
 
 logger = get_logger().getChild(__name__)
 
@@ -15,10 +14,8 @@ class ApplyHeartbeatUC:
         self,
         *,
         uow: UnitOfWork[StateReadContext, StateWriteContext],
-        projection: EngineProjectionService,
     ) -> None:
         self._uow = uow
-        self._projection = projection
 
     async def run(self, cmd: ApplyHeartbeatCmd) -> None:
         """
@@ -63,12 +60,6 @@ class ApplyHeartbeatUC:
             logger.info(
                 f"Heartbeat updated runtime state: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
             )
-            try:
-                await self._projection.sync_engine(cmd.engine_id)
-            except Exception:
-                logger.exception(
-                    f"Failed to project engine state update on heartbeat: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"
-                )
         else:
             logger.info(
                 f"Heartbeat produced no state changes: engine_id={cmd.engine_id} instance_id={cmd.instance_id} seq_no={cmd.seq_no}"

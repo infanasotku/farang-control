@@ -6,7 +6,6 @@ from app.domains.func.registration import decide_registration
 from app.infra.common.time import now_utc
 from app.infra.logging.logger import get_logger
 from app.infra.postgres.uows.state import StateReadContext, StateWriteContext
-from app.services.projections.engine import EngineProjectionService
 from app.services.state.shared import digest_replacement_permit
 
 logger = get_logger().getChild(__name__)
@@ -17,10 +16,8 @@ class RegisterInstanceUC:
         self,
         *,
         uow: UnitOfWork[StateReadContext, StateWriteContext],
-        projection: EngineProjectionService,
     ) -> None:
         self._uow = uow
-        self._projection = projection
 
     async def run(
         self,
@@ -81,14 +78,6 @@ class RegisterInstanceUC:
                 f"previous_instance_id={result.replaced_live_instance_id} new_instance_id={instance_id} "
                 f"epoch={result.epoch}"
             )
-
-        if result.new_runtime_state is not None:
-            try:
-                await self._projection.sync_engine(engine_id)
-            except Exception:
-                logger.exception(
-                    f"Failed to project engine state update on registration: engine_id={engine_id} instance_id={instance_id}"
-                )
 
         logger.info(f"Register instance finished: engine_id={engine_id} instance_id={instance_id} epoch={result.epoch}")
         return result.epoch

@@ -10,18 +10,17 @@ from app.container import Container
 from app.controllers.admin.models import EngineProjection as EngineProjectionModel
 from app.controllers.admin.views.base import AdminModelView, PrettyJSONField
 from app.controllers.admin.views.json import render_json
-from app.controllers.admin.views.mixins import ReplacementPermitMixin, SyncProjectionsMixin
+from app.controllers.admin.views.mixins import ReplacementPermitMixin
 from app.domains.exceptions.engine import EngineNotFoundError
 from app.dto.spec import UpdateSpecCmd
 from app.infra.logging import get_logger
 from app.services.engine import EngineService
-from app.services.projections.engine import EngineProjectionService
 from app.services.spec import SpecService
 
 logger = get_logger().getChild(__name__)
 
 
-class EngineView(SyncProjectionsMixin, ReplacementPermitMixin, AdminModelView, model=EngineProjectionModel):
+class EngineView(ReplacementPermitMixin, AdminModelView, model=EngineProjectionModel):
     name = "Engine"
     name_plural = "Engines"
 
@@ -105,31 +104,31 @@ class EngineView(SyncProjectionsMixin, ReplacementPermitMixin, AdminModelView, m
     @inject
     async def _get_by_id(
         self,
-        projection_id: UUID,
-        svc: EngineProjectionService = Provide[Container.projection_service],
+        engine_id: UUID,
+        svc: EngineService = Provide[Container.engine_service],
     ) -> Any:
         try:
-            projection = await svc.get_by_id(projection_id)
+            engine_status = await svc.get_status(engine_id)
         except EngineNotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engine not found")
-        return EngineProjectionModel.from_projection(projection)
+        return EngineProjectionModel.from_status(engine_status)
 
     @inject
     async def list(
         self,
         request: Request,
-        svc: EngineProjectionService = Provide[Container.projection_service],
+        svc: EngineService = Provide[Container.engine_service],
     ) -> Pagination:
         page = self.validate_page_number(request.query_params.get("page"), 1)
         page_size = self.validate_page_number(request.query_params.get("pageSize"), 0)
         page_size = min(page_size or self.page_size, max(self.page_size_options))
 
-        projections = await svc.get(offset=(page - 1) * page_size, limit=page_size)
-        rows = [EngineProjectionModel.from_projection(projection) for projection in projections]
+        result = await svc.get_statuses(offset=(page - 1) * page_size, limit=page_size)
+        rows = [EngineProjectionModel.from_status(item) for item in result.items]
 
         return Pagination(
             rows=rows,
             page=page,
             page_size=page_size,
-            count=len(projections),
+            count=result.total,
         )

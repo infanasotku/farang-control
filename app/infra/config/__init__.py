@@ -2,14 +2,12 @@ import os
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import AmqpDsn, PostgresDsn, RedisDsn
+from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.infra.config.admin import AdminSettings
 from app.infra.config.auth import AuthSettings
 from app.infra.config.postgres import PostgreSQLSettings
-from app.infra.config.rabbitmq import RabbitMQSettings
-from app.infra.config.redis import RedisSettings
 
 
 class CommonSettings(BaseSettings):
@@ -22,8 +20,6 @@ class Settings(BaseSettings):
     postgres: PostgreSQLSettings
     auth: AuthSettings
     admin: AdminSettings
-    redis: RedisSettings
-    rabbitmq: RabbitMQSettings
 
     model_config = SettingsConfigDict(env_nested_delimiter="__")
 
@@ -34,8 +30,6 @@ class TestSettings(Settings):
     )
     auth: AuthSettings = AuthSettings(edge_api_key="test_key", operator_api_key="test_operator_key")
     admin: AdminSettings = AdminSettings(username="admin", password="admin", secret="admin_secret")
-    redis: RedisSettings = RedisSettings(dsn=RedisDsn("redis://localhost:6379/0"))
-    rabbitmq: RabbitMQSettings = RabbitMQSettings(dsn=AmqpDsn("amqp://guest:guest@localhost:5672/"))
 
 
 def generate_settings():
